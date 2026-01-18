@@ -1,0 +1,157 @@
+# .spec-kit/config.yaml
+# Hackathon II - Spec-Driven Development Configuration
+# See: Hackathon II - Todo Spec-Driven Development.pdf (pages 9-10)
+
+name: hackathon-todo-fullstack
+version: "1.0"
+description: "The Evolution of Todo - From CLI to Cloud-Native AI Chatbot"
+
+# Directory structure configuration
+structure:
+  specs_dir: specs
+  features_dir: specs/features
+  api_dir: specs/api
+  database_dir: specs/database
+  ui_dir: specs/ui
+  archive_dir: specs/archive
+
+# Phase definitions for instructor review
+# Each phase builds on previous phases (cumulative features)
+phases:
+  - name: phase-1-console
+    title: "Phase I: In-Memory Python Console App"
+    description: "Basic Level Functionality - CLI todo app with in-memory storage"
+    points: 100
+    due_date: "2025-12-07"
+    status: complete
+    features:
+      - task-crud
+    tech_stack:
+      - Python 3.13+
+      - UV package manager
+      - Claude Code
+      - Spec-Kit Plus
+    deliverables:
+      - "Console app with 5 basic features"
+      - "Spec-driven implementation artifacts"
+
+  - name: phase-2-web
+    title: "Phase II: Full-Stack Web Application"
+    description: "Multi-user web app with persistent storage and authentication"
+    points: 150
+    due_date: "2025-12-14"
+    status: complete
+    features:
+      - task-crud
+      - authentication
+    tech_stack:
+      - Next.js 16+ (App Router)
+      - FastAPI
+      - SQLModel
+      - Neon Serverless PostgreSQL
+      - Better Auth
+      - Vercel deployment
+    deliverables:
+      - "RESTful API endpoints"
+      - "Responsive frontend interface"
+      - "JWT-based authentication"
+      - "Database persistence"
+
+  - name: phase-3-chatbot
+    title: "Phase III: AI-Powered Todo Chatbot"
+    description: "Conversational interface using OpenAI ChatKit, Agents SDK, and MCP"
+    points: 200
+    due_date: "2025-12-21"
+    status: in-progress
+    features:
+      - task-crud
+      - authentication
+      - chatbot
+    tech_stack:
+      - OpenAI ChatKit
+      - OpenAI Agents SDK
+      - Official MCP SDK
+      - Google Gemini API (free tier)
+      - Stateless chat architecture
+    deliverables:
+      - "Natural language task management"
+      - "MCP server with 5 tools"
+      - "Conversation persistence"
+      - "Voice input support (bonus)"
+      - "Urdu language support (bonus)"
+
+  - name: phase-4-k8s
+    title: "Phase IV: Local Kubernetes Deployment"
+    description: "Containerized deployment on Minikube with Helm charts"
+    points: 250
+    due_date: "2026-01-04"
+    status: pending
+    features:
+      - task-crud
+      - authentication
+      - chatbot
+      - k8s-deployment
+    tech_stack:
+      - Docker (Docker Desktop)
+      - Docker AI Agent (Gordon)
+      - Kubernetes (Minikube)
+      - Helm Charts
+      - kubectl-ai
+      - Kagent
+    deliverables:
+      - "Containerized frontend and backend"
+      - "Helm charts for deployment"
+      - "Local Minikube deployment"
+      - "AI-assisted DevOps"
+
+  - name: phase-5-cloud
+    title: "Phase V: Advanced Cloud Deployment"
+    description: "Production-grade Kubernetes with event-driven architecture"
+    points: 300
+    due_date: "2026-01-18"
+    status: pending
+    features:
+      - task-crud
+      - authentication
+      - chatbot
+      - k8s-deployment
+      - cloud-native
+    tech_stack:
+      - Kafka/Redpanda Cloud
+      - Dapr
+      - Azure AKS / Google GKE / Oracle OKE
+      - GitHub Actions CI/CD
+    deliverables:
+      - "Advanced features (recurring tasks, due dates, reminders)"
+      - "Intermediate features (priorities, tags, search, filter, sort)"
+      - "Event-driven architecture with Kafka"
+      - "Dapr for distributed runtime"
+      - "Production cloud deployment"
+
+# Bonus features tracking
+bonus:
+  - name: reusable-intelligence
+    description: "Create and use reusable intelligence via Claude Code Subagents and Agent Skills"
+    points: 200
+    status: pending
+
+  - name: cloud-blueprints
+    description: "Create and use Cloud-Native Blueprints via Agent Skills"
+    points: 200
+    status: pending
+
+  - name: multi-language
+    description: "Support Urdu in chatbot"
+    points: 100
+    status: in-progress
+
+  - name: voice-commands
+    description: "Add voice input for todo commands"
+    points: 200
+    status: in-progress
+
+# Total points breakdown
+scoring:
+  total_base: 1000
+  total_bonus: 600
+  grand_total: 1600

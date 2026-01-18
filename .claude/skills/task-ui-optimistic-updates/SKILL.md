@@ -101,6 +101,56 @@ const [isLoading, setIsLoading] = useState(false);
 - Critical financial transactions
 - Operations where rollback is confusing
 
+## Conversational Optimistic Updates
+
+In a conversational UI (like a chatbot), the principle of optimistic updates still applies, but the implementation is different. Instead of changing a UI element's state, you provide immediate *linguistic* feedback.
+
+**Core Concept:** The AI agent immediately confirms the action was successful in its chat response, while the actual backend operation (e.g., an MCP tool call) runs asynchronously. If the operation fails, the agent sends a *new, corrective* message.
+
+**Benefits:**
+-   **Instant Feedback:** The user receives immediate confirmation, making the chatbot feel highly responsive.
+-   **Natural Interaction:** Mirrors human conversation, where we often confirm an action before it's technically complete.
+-   **Graceful Error Handling:** Failures are handled through conversation, which is a natural way to manage exceptions.
+
+### Example: Conversational Flow
+
+1.  **User:** "Mark 'buy milk' as complete."
+2.  **Chatbot (Optimistic Response):** "Done! I've marked 'buy milk' as complete."
+    -   *At this point, the response is sent to the UI immediately.*
+    -   *In the background, the AI agent invokes the `complete_task` MCP tool.*
+3.  **Scenario A: Success**
+    -   The `complete_task` tool succeeds.
+    -   No further action is needed. The optimistic response was correct.
+4.  **Scenario B: Failure**
+    -   The `complete_task` tool fails (e.g., database error, task not found).
+    -   The AI agent receives the error from the tool.
+    -   **Chatbot (Corrective Response):** "Apologies, it seems I wasn't able to mark 'buy milk' as complete due to a network issue. Please try again in a moment."
+    -   *This new message is sent to the UI, correcting the previous optimistic statement.*
+
+### Implementation Pattern
+
+This pattern is typically implemented within the AI agent's orchestration logic on the backend.
+
+```python
+# Simplified example within an agent's response generation logic
+
+async def handle_user_message(message: str):
+    intent = detect_intent(message) # e.g., 'complete_task'
+    entities = extract_entities(message) # e.g., task_title='buy milk'
+
+    if intent == 'complete_task':
+        # 1. Immediately generate and send the optimistic response
+        yield "Okay, I've marked that task as complete!"
+
+        # 2. In the background, perform the actual operation
+        try:
+            await complete_task_tool(title=entities['task_title'])
+            # 3a. If successful, do nothing. The optimistic response holds true.
+        except Exception as e:
+            # 3b. If it fails, send a new, corrective message.
+            yield f"My apologies, I ran into an error: {e}. The task was not marked as complete."
+```
+
 ## Error Handling
 
 ### Toast Notifications

@@ -217,6 +217,9 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - TypeScript 5+ + Next.js 16+ (App Router), React 19+, Better Auth (authentication), Tailwind CSS 4+ (004-frontend-nextjs)
 - React Hook Form + Zod (form validation), Axios (HTTP client), Vitest + Playwright (testing) (004-frontend-nextjs)
 - Vercel deployment platform (HTTPS, CDN, environment variables) (004-frontend-nextjs)
+- HYBRID AI Architecture: OpenAI Agents SDK (Swarm) + OpenAI ChatKit (hackathon requirements) with Google Gemini API (free tier) as LLM backend via OpenAI-compatible interface (007-chatbot-mcp)
+- FastAPI chat endpoint, MCP tools as Python functions with OpenAI function calling (add_task, list_tasks, complete_task, delete_task, update_task) registered with Swarm Agent (007-chatbot-mcp)
+- Conversation and Message models in Neon PostgreSQL for stateless chat architecture, sliding window + Gemini summarization via AsyncOpenAI client (007-chatbot-mcp)
 
 ## Recent Changes
 - 001-cli-todo-app: Added Python 3.13+ + None (stdlib only for MVP), pytest (testing), ruff (linting)
@@ -232,3 +235,26 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
   - Enhanced .env.example with detailed documentation and setup guide
   - Test suite: 14 passing unit tests (SignupForm, LoginForm, TaskItem coverage)
   - Status: Frontend ready for Phase 12 (Deployment to Vercel)
+- 007-chatbot-mcp (Phase III Initialization - 2026-01-03):
+  - Created phase-3-chatbot branch for AI-powered chatbot development
+  - Updated constitution.md v1.4.0 → v1.5.0 with comprehensive Phase III specifications
+  - Added MCP (Model Context Protocol) architecture with 5 stateless tools
+  - Specified OpenAI ChatKit frontend integration requirements
+  - Defined OpenAI Agents SDK backend integration
+  - Added database models for Conversation and Message (stateless architecture)
+  - Documented natural language interaction examples
+  - Specified Definition of Done for chatbot feature
+  - Status: Ready to begin Phase III implementation with SDD workflow
+- 007-chatbot-mcp (Planning Phase - 2026-01-03):
+  - Completed /sp.clarify with 5 critical decisions (context management, retry strategy, JWT validation, voice input, summary storage)
+  - Completed /sp.plan with comprehensive architecture design
+  - **HYBRID APPROACH**: OpenAI Agents SDK (Swarm) + OpenAI ChatKit (hackathon requirements) with Gemini API (free tier) as LLM backend
+  - Research phase: Investigated OpenAI Swarm with Gemini backend via OpenAI-compatible interface, MCP tools as Python functions, OpenAI ChatKit integration, sliding window + summarization, retry + circuit breaker, Web Speech API, Urdu support
+  - Design phase: Created data model (Conversation with summary field, Message with user/assistant roles)
+  - API contracts: chat-api.yaml (OpenAPI 3.0.3), mcp-tools.yaml (5 tool signatures with OpenAI function calling)
+  - Quickstart guide: End-to-end implementation instructions with HYBRID pattern (AsyncOpenAI client with Gemini endpoint)
+  - Technologies validated: OpenAI SDK (openai, Swarm), OpenAI ChatKit (@openai/chatkit), Gemini API via OpenAI-compatible endpoint (gemini-2.0-flash-exp), tiktoken (token counting), tenacity (retry), Web Speech API (voice)
+  - Cost optimization: Free tier Gemini API (1500 req/day, 15 req/min) replaces paid OpenAI LLM API while maintaining hackathon compliance
+  - Status: Planning complete with HYBRID integration pattern, ready for /sp.tasks to break down into implementation tasks
+\n\n---
+Note from Gemini: This Claude session was interrupted due to a usage limit. Gemini took over and completed the project restructuring and skill updates based on the context in this file. For full details of subsequent progress and the completed Phase III, please refer to GEMINI.md.

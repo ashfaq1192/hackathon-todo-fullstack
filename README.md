@@ -58,6 +58,7 @@ Specification → Planning → Tasks → Implementation
 |-------|-------------|--------|--------|----------------|
 | **Phase I** | In-Memory Python Console App | ✅ Complete | 100 | Dec 18, 2024 |
 | **Phase II** | Full-Stack Web Application | ✅ Complete | 150 | Dec 30, 2024 |
+| **Phase III** | AI Chatbot with MCP Tools | ✅ Complete | 200 + 300 bonus | Jan 18, 2026 |
 
 ---
 
@@ -96,6 +97,20 @@ Specification → Planning → Tasks → Implementation
 - **AI Agent**: Claude Code (Sonnet 4.5)
 - **Package Management**: UV (Python), npm (Node.js)
 - **Version Control**: Git + GitHub
+
+### Phase III: AI Chatbot
+
+#### Backend AI Integration
+- **AI Framework**: OpenAI Agents SDK
+- **LLM Provider**: OpenAI (via OpenAI API)
+- **MCP Tools**: 5 function calling tools (add, list, complete, update, delete)
+- **Context Management**: Conversation history persistence, OpenAI Threads
+- **Rate Limiting**: Managed by OpenAI API
+
+#### Frontend Chat
+- **Chat UI**: OpenAI ChatKit integration
+- **Voice Input**: Web Speech API (if implemented)
+- **Streaming**: Server-Sent Events (SSE) (if implemented)
 
 ---
 
@@ -195,9 +210,45 @@ pytest --cov=src --cov-report=term-missing
 
 **Security**: All endpoints validate JWT tokens and enforce user isolation.
 
+---
+
+## 🤖 Phase III: AI Chatbot
+
+### Features Implemented (200 base points)
+
+#### ✅ Core Chat Features (200 points)
+- ✅ Natural language task management ("Add a task to buy groceries")
+- ✅ Conversation history and persistence in database
+- ✅ MCP tools for all CRUD operations (Add, List, Complete, Update, Delete)
+- ✅ OpenAI ChatKit frontend integration
+- ✅ Stateless backend architecture for scalability
+- ✅ Secure authentication via JWT, user isolation
+
+### Chat API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/chat/` | Send natural language message to AI agent |
+| `POST` | `/api/chat/session` | Create ChatKit session (authenticated) |
+| `GET` | `/api/mcp/tools` | List available MCP tools (for agent) |
+| `GET` | `/api/mcp/health` | MCP server health check |
+
+
+### Natural Language Examples
+
+```
+English:
+- "Add a task to buy groceries"
+- "Show me my pending tasks"
+- "Mark task 3 as complete"
+- "Delete task 5"
+- "Update task 1, set description to 'Check prices'"
+```
+
 ### Database Schema (Neon PostgreSQL)
 
 #### Tasks Table
+(Existing from Phase II)
 ```sql
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
@@ -212,17 +263,44 @@ CREATE TABLE tasks (
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 ```
 
+#### Conversation Table
+```sql
+CREATE TABLE conversation (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_conversation_user_id ON conversation(user_id);
+```
+
+#### Message Table
+```sql
+CREATE TABLE message (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER NOT NULL REFERENCES conversation(id),
+    user_id VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_message_conversation_id ON message(conversation_id);
+CREATE INDEX idx_message_user_id ON message(user_id);
+```
+
 #### Better Auth Tables
 - `user` - User accounts (email, hashed password)
 - `session` - Active sessions
 - `verification` - Email verification tokens
 - `reset_password` - Password reset tokens
 
----
-
 ## 🏗️ Architecture
 
-### System Architecture (Phase II)
+### System Architecture
+
+#### Phase II: Full-Stack Web Application
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -259,6 +337,41 @@ CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 │  • SSL required                                                  │
 │  • Branching for dev/staging/prod                               │
 │  • Automatic backups                                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Phase III: AI Chatbot
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT (Browser)                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  Next.js 16 App (React 19 + TypeScript 5)                  │ │
+│  │  • OpenAI ChatKit (conversational UI)                      │ │
+│  │  • Better Auth (JWT for chat API)                          │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                                 │ HTTPS
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    BACKEND API (FastAPI)                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  FastAPI 0.115.0+ (Python 3.13+)                           │ │
+│  │  • Auth Middleware (validates JWT)                         │ │
+│  │  • Chat Endpoint (/api/chat)                               │ │
+│  │  • MCP Server (FastMCP)                                    │ │
+│  │  • OpenAI Agents SDK (orchestration)                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                                 │ Internal Invocation / DB Access
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        MCP TOOLS / DB                             │
+│  • MCP Tools (add_task, list_tasks, etc.)                       │
+│  • Database (Neon PostgreSQL)                                   │
+│    • Tasks, Conversations, Messages tables                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -299,7 +412,7 @@ Returns only user's own tasks
 - **Git**: Version control ([install](https://git-scm.com/))
 - **Neon Account**: Free PostgreSQL database ([signup](https://neon.tech))
 
-### Quick Start (Full Application)
+### Quick Start (Phase II: Full-Stack Web Application)
 
 #### 1. Clone Repository
 
@@ -311,7 +424,7 @@ cd hackathon-todo-fullstack
 #### 2. Backend Setup
 
 ```bash
-cd backend
+cd phase-2-fullstack/backend
 
 # Install dependencies
 uv sync
@@ -333,7 +446,7 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 #### 3. Frontend Setup
 
 ```bash
-cd ../frontend
+cd ../../frontend
 
 # Install dependencies
 npm install
@@ -362,6 +475,60 @@ npm run dev
 3. Enter email and password (min 8 characters)
 4. You'll be auto-logged in and redirected to the dashboard
 5. Start creating tasks!
+
+### Quick Start (Phase III: AI Chatbot)
+
+#### 1. Backend Setup
+
+```bash
+cd phase-3-chatbot/backend
+
+# Install dependencies
+uv sync
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your Neon DATABASE_URL, BETTER_AUTH_SECRET, JWT_SECRET_KEY, and OPENAI_API_KEY
+# Ensure OPENAI_API_KEY is set (e.g., from platform.openai.com)
+
+# Run migrations (creates tables including Conversation, Message)
+# You might need to update migration scripts or run specific commands if tables are new
+python -c "from src.database import create_db_and_tables; create_db_and_tables()"
+
+# Start backend server
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Backend runs at**: `http://localhost:8000`
+**API Docs (Swagger)**: `http://localhost:8000/docs`
+
+#### 2. Frontend Setup
+
+```bash
+cd ../../phase-3-chatbot/frontend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env.local
+# Edit .env.local with:
+#   - NEXT_PUBLIC_OPENAI_DOMAIN_KEY (from platform.openai.com/settings/organization/chatkit)
+#   - NEXT_PUBLIC_CHATKIT_API_ENDPOINT=http://localhost:8000/api
+#   - Other Better Auth related variables as needed for authentication
+
+# Start frontend server
+npm run dev
+```
+
+**Frontend runs at**: `http://localhost:3000` (Chatbot UI will be at `/chat` if setup as per boilerplate)
+
+#### 3. Access the Chatbot
+
+1. Open `http://localhost:3000`
+2. Ensure you are logged in (signup/login via Phase II UI)
+3. Navigate to the chat page (e.g., `/chat`)
+4. Start interacting with the AI Chatbot!
 
 ---
 
@@ -549,156 +716,61 @@ npm run test:e2e:ui       # With UI
 
 ## 📂 Project Structure
 
+The project is structured to clearly demarcate code and specifications by phase, adhering to the hackathon's requirements for traceability and progressive evolution.
+
 ```
 hackathon-todo-fullstack/
-├── .specify/                      # Spec-Kit Plus configuration
+├── .spec-kit/                     # Spec-Kit Plus configuration
+│   └── config.yaml                # Defines project phases and features
+│
+├── .specify/                      # SDD framework configuration
 │   ├── memory/
 │   │   └── constitution.md        # Project principles & standards
 │   ├── scripts/                   # Automation scripts
 │   └── templates/                 # Spec templates
 │
-├── backend/                       # FastAPI Backend (Railway)
+├── history/                       # Development History
+│   ├── prompts/                   # Prompt History Records (PHRs) by feature/phase
+│   └── adr/                       # Architecture Decision Records
+│
+├── specs/                         # Consolidated Feature Specifications
+│   ├── overview.md                # High-level overview of phases
+│   ├── architecture.md            # Overall system architecture
+│   ├── features/                  # Consolidated specs for core features
+│   │   ├── authentication.md      # Auth feature across phases
+│   │   ├── chatbot.md             # Chatbot feature across phases
+│   │   └── task-crud.md           # Task CRUD feature across phases
+│   ├── api/                       # API contracts and definitions
+│   ├── database/                  # Database schema definitions
+│   └── ui/                        # UI component specifications
+│
+├── specs/archive/                 # Archived Detailed SDD Artifacts (by phase)
+│   ├── phase-1/                   # Phase I detailed specs (e.g., 001-cli-todo-app/)
+│   ├── phase-2/                   # Phase II detailed specs (e.g., 002-database-setup/)
+│   └── phase-3/                   # Phase III detailed specs (e.g., 007-chatbot-mcp/)
+│
+├── phase-1-cli/                   # Phase I: Python CLI Application Code
 │   ├── src/
-│   │   ├── api/                  # FastAPI routes
-│   │   │   ├── tasks.py          # Task endpoints
-│   │   │   └── deps.py           # Dependencies (JWT validation)
-│   │   ├── core/                 # Core utilities
-│   │   │   ├── auth.py           # JWT validation
-│   │   │   └── errors.py         # Custom exceptions
-│   │   ├── database/             # Database layer
-│   │   │   ├── connection.py     # Engine & session
-│   │   │   ├── crud.py           # CRUD operations
-│   │   │   └── init_db.py        # Table creation
-│   │   ├── models/               # SQLModel entities
-│   │   │   └── task.py           # Task model
-│   │   ├── schemas/              # Pydantic schemas
-│   │   │   └── task.py           # Request/response models
-│   │   ├── config.py             # Environment config
-│   │   └── main.py               # FastAPI app entry
-│   ├── tests/
-│   │   ├── unit/                 # Unit tests
-│   │   └── integration/          # Integration tests
-│   ├── migrations/               # Database migrations
-│   ├── .env.example              # Environment template
-│   ├── pyproject.toml            # Python dependencies
-│   └── README.md                 # Backend docs
+│   └── tests/
 │
-├── frontend/                      # Next.js Frontend (Vercel)
-│   ├── app/                      # App Router
-│   │   ├── (auth)/               # Auth route group
-│   │   │   ├── login/            # Login page
-│   │   │   └── signup/           # Signup page
-│   │   ├── (dashboard)/          # Dashboard route group
-│   │   │   └── page.tsx          # Tasks dashboard
-│   │   ├── api/                  # API routes
-│   │   │   ├── auth/             # Better Auth endpoints
-│   │   │   └── token/            # JWT token endpoint
-│   │   ├── layout.tsx            # Root layout
-│   │   ├── page.tsx              # Landing page
-│   │   └── globals.css           # Global styles
-│   ├── components/               # React components
-│   │   ├── auth/                 # SignupForm, LoginForm
-│   │   ├── tasks/                # TaskList, TaskItem, CreateTaskForm
-│   │   ├── layout/               # Navigation
-│   │   └── ui/                   # Button, Input, Spinner, Toast
-│   ├── lib/                      # Utilities
-│   │   ├── api/                  # API client
-│   │   ├── auth/                 # Better Auth config
-│   │   └── validation/           # Zod schemas
-│   ├── types/                    # TypeScript types
-│   ├── __tests__/                # Unit tests
-│   ├── e2e/                      # E2E tests
-│   ├── .env.example              # Environment template
-│   ├── package.json              # Node dependencies
-│   └── README.md                 # Frontend docs
+├── phase-2-fullstack/             # Phase II: Full-Stack Web Application Code
+│   ├── backend/                   # FastAPI Backend
+│   └── frontend/                  # Next.js Frontend
 │
-├── src/                          # Phase I: CLI App
-│   ├── cli/                      # CLI interface
-│   ├── models/                   # Task model
-│   └── services/                 # CRUD operations
+├── phase-3-chatbot/               # Phase III: AI Chatbot Application Code
+│   ├── backend/                   # FastAPI Backend with MCP & Agents SDK
+│   └── frontend/                  # Next.js Frontend with ChatKit
 │
-├── specs/                        # Feature Specifications
-│   ├── 001-cli-todo-app/
-│   │   ├── spec.md               # Requirements
-│   │   ├── plan.md               # Technical approach
-│   │   └── tasks.md              # Implementation tasks
-│   ├── 002-database-setup/       # Same structure
-│   ├── 003-backend-api/          # Same structure
-│   └── 004-frontend-nextjs/      # Same structure
-│
-├── history/                      # Development History
-│   ├── prompts/                  # Prompt History Records (PHRs)
-│   └── adr/                      # Architecture Decision Records
-│
-├── tests/                        # Phase I Tests
-│   ├── unit/                     # Unit tests
-│   └── integration/              # Integration tests
-│
-├── .gitignore                    # Git ignore rules
-├── CLAUDE.md                     # Claude Code instructions
-├── pyproject.toml                # Root Python config
-├── README.md                     # This file
-└── Hackathon II - Todo Spec-Driven Development.pdf
+├── .gitignore                     # Git ignore rules
+├── CLAUDE.md                      # Claude Code session history
+├── GEMINI.md                      # Gemini session history (this document)
+├── README.md                      # This file
+├── Hackathon II - Todo Spec-Driven Development.pdf # Hackathon document
+├── pyproject.toml                 # Root Python config (for env management)
+└── uv.lock                        # Python dependency lock file
 ```
 
----
 
-## ✅ Phase-II Compliance Checklist
-
-### Requirements from Hackathon Document
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| **Spec-Driven Development** |
-| ✅ Constitution file | Complete | `.specify/memory/constitution.md` |
-| ✅ Spec for every feature | Complete | `specs/001-004/` (4 features) |
-| ✅ History tracking | Complete | `history/prompts/` |
-| ✅ No manual coding | Complete | 100% Claude Code generated |
-| **Technology Stack** |
-| ✅ Next.js 16+ (App Router) | Complete | `frontend/package.json` |
-| ✅ FastAPI 0.115+ | Complete | `backend/pyproject.toml` |
-| ✅ SQLModel 0.0.22+ | Complete | `backend/pyproject.toml` |
-| ✅ Neon PostgreSQL | Complete | Deployed at neon.tech |
-| ✅ Better Auth | Complete | `frontend/lib/auth/` |
-| **Core Features (5 Basic)** |
-| ✅ Add Task | Complete | POST `/api/{user_id}/tasks` |
-| ✅ Delete Task | Complete | DELETE `/api/{user_id}/tasks/{id}` |
-| ✅ Update Task | Complete | PUT/PATCH `/api/{user_id}/tasks/{id}` |
-| ✅ View Task List | Complete | GET `/api/{user_id}/tasks` |
-| ✅ Mark Complete | Complete | PATCH `/api/{user_id}/tasks/{id}` |
-| **Authentication** |
-| ✅ User signup | Complete | Better Auth email/password |
-| ✅ User login | Complete | JWT tokens in httpOnly cookies |
-| ✅ JWT validation | Complete | Middleware on all endpoints |
-| ✅ User data isolation | Complete | Enforced at DB level |
-| **API Design** |
-| ✅ 6 RESTful endpoints | Complete | See API section above |
-| ✅ Request validation | Complete | Pydantic schemas |
-| ✅ Error handling | Complete | 401, 403, 404, 422, 500 |
-| ✅ OpenAPI docs | Complete | `/docs` endpoint |
-| **Frontend** |
-| ✅ Responsive design | Complete | Mobile, tablet, desktop |
-| ✅ Loading states | Complete | Skeletons + spinners |
-| ✅ Toast notifications | Complete | React Hot Toast |
-| ✅ Error handling | Complete | Retry logic + redirects |
-| **Testing** |
-| ✅ 75%+ backend coverage | Complete | 85% coverage (17 tests) |
-| ✅ Frontend tests | Complete | 14 unit tests |
-| ✅ All tests passing | Complete | pytest + vitest |
-| **Deployment** |
-| ✅ Deployed to Vercel | Complete | Frontend live |
-| ✅ Backend deployed | Complete | Railway live |
-| ✅ Demo video | Complete | <90 seconds |
-| ✅ Public GitHub repo | Complete | With README |
-| **Documentation** |
-| ✅ README with setup | Complete | This file |
-| ✅ CLAUDE.md | Complete | Root directory |
-| ✅ Backend README | Complete | `backend/README.md` |
-| ✅ Frontend README | Complete | `frontend/README.md` |
-
-**Phase-II Score**: 150/150 points ✅
-
----
 
 ## 🎓 Learning Outcomes
 
@@ -802,7 +874,7 @@ This project was created for Hackathon II: Spec-Driven Development.
 
 - **Hackathon Organizers**: Panaversity, PIAIC, GIAIC
 - **Mentors**: Zia, Rehan, Junaid, Wania
-- **AI Agent**: Claude Code (Sonnet 4.5)
+- **AI Agent**: Claude Code (Sonnet 4.5) & Gemini (for Phase III completion and restructuring)
 - **Spec Management**: Spec-Kit Plus
 
 ---

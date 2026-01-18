@@ -179,6 +179,54 @@ def get_current_user(credentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Invalid token")
 ```
 
+## Integration with ChatKit
+
+When using the OpenAI ChatKit for a conversational UI, it's crucial to ensure that the user's authentication context (from Better Auth) is correctly passed to the ChatKit component and subsequently to your backend chat endpoint.
+
+**Challenge:** ChatKit needs to know *who* the authenticated user is to make calls to your backend that are tied to that specific user's session.
+
+**Solution:** The most straightforward way is to retrieve the authenticated user's JWT token (or a session ID) on the client-side and provide it to ChatKit's configuration. Your backend's `/api/chatkit/session` endpoint (if used) should then validate this token and generate a ChatKit session that respects the user's identity.
+
+**Client-Side Integration Example (Conceptual):**
+
+```typescript
+// frontend/components/chat/ChatInterface.tsx (conceptual)
+import { useSession } from '@/lib/auth/client'; // From Better Auth client
+import { getApiToken } from '@/lib/api/client'; // Helper to retrieve JWT
+
+// ... inside your ChatKit component or setup function
+const { data: session } = useSession(); // Get Better Auth session
+
+// Only render ChatKit if authenticated
+if (!session) {
+  return <div>Please log in to use the chatbot.</div>;
+}
+
+// Assume ChatKit uses a backend endpoint to establish its session
+// Your backend's /api/chatkit/session endpoint will receive the JWT
+// via a standard Authorization header or a custom mechanism.
+// This endpoint must validate the JWT and return appropriate ChatKit config.
+
+const chatkitConfig = {
+  // ... other ChatKit configuration
+  apiEndpoint: process.env.NEXT_PUBLIC_CHATKIT_API_ENDPOINT, // Your custom backend
+  // Potentially pass the JWT to a token provider endpoint if ChatKit supports it
+  // tokenProviderEndpoint: '/api/chatkit/token-provider', // Your endpoint that returns a valid token
+};
+
+// ... then initialize ChatKit with chatkitConfig
+```
+
+**Backend `/api/chatkit/session` Endpoint (Conceptual):**
+
+Your backend endpoint (e.g., `phase-3-chatbot/backend/src/api/routes/chatkit.py` or similar) responsible for providing ChatKit session data must:
+
+1.  Receive the JWT token from the frontend (e.g., in the `Authorization` header).
+2.  Validate the JWT using the same mechanism as other protected routes.
+3.  Extract the `user_id` from the token.
+4.  Generate and return the necessary ChatKit session configuration, including the `user_id` so that subsequent ChatKit calls made by the SDK to your backend can be associated with the correct user.
+```
+
 ## Protect Routes with Middleware
 
 Create `middleware.ts` in project root to protect authenticated routes:

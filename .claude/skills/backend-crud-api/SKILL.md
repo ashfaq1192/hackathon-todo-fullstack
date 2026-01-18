@@ -1,7 +1,117 @@
 ---
 name: backend-crud-api
-description: Implement RESTful CRUD endpoints with JWT authentication, user isolation, error handling, and database integration for any resource entity. Use when users ask to (1) Create REST API endpoints for a new resource/entity, (2) Add JWT authentication to protect user-specific resources, (3) Implement CRUD operations with database using SQLModel/SQLAlchemy, (4) Build multi-tenant APIs where each user has isolated data, (5) Set up comprehensive error handling across API endpoints, (6) Add authentication/authorization to existing endpoints, (7) Create production-grade APIs with proper validation and logging
+description: Implement backend APIs using either a modern MCP Tool-based architecture or a traditional RESTful approach. Use when (1) Creating backend services for AI agents with custom tools (MCP), (2) Building traditional REST APIs for web/mobile clients, (3) Adding JWT authentication, (4) Implementing user data isolation, (5) Setting up error handling and database integration with SQLModel/SQLAlchemy.
 ---
+
+# Backend API Architecture
+
+This skill provides two architectural patterns for building secure, production-ready backend APIs: a modern MCP Tool-based architecture for AI agents, and a traditional RESTful architecture for standard clients.
+
+## Architectural Patterns
+
+Choose the pattern that best fits your application's needs.
+
+### **1. Modern MCP Tool-Based Pattern (Phase III+)**
+
+This pattern is ideal for AI-powered applications where a conversational agent needs to perform actions. Instead of exposing REST endpoints for each action, you create stateless "tools" that the AI agent can invoke.
+
+**Core Concept:** The backend exposes a single chat endpoint. The AI agent interprets natural language, decides which tool to use (e.g., `add_task`), and calls it through a Model Context Protocol (MCP) server.
+
+#### Quick Start: MCP Tool Example
+
+Here's a complete example of creating and exposing an `add_task` MCP tool in FastAPI.
+
+##### Step 1: Define the MCP Tool
+
+A tool is a simple Python function with type hints. It contains the business logic for a specific action.
+
+`backend/src/mcp/tools/add_task.py`:
+```python
+from sqlmodel import Session
+from src.models import Task
+
+def add_task(
+    session: Session,
+    user_id: str,
+    title: str,
+    description: str | None = None
+) -> dict:
+    """
+    MCP tool for adding a task for a given user.
+    """
+    # [T060] Log MCP tool invocation (not shown)
+    task = Task(user_id=user_id, title=title, description=description)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return {
+        "task_id": task.id,
+        "title": task.title,
+        "status": "created",
+    }
+```
+
+##### Step 2: Create the MCP Server
+
+The MCP server discovers and registers all your tools. The official `mcp` library simplifies this.
+
+`backend/src/mcp/server.py`:
+```python
+from mcp.server.fastmcp import FastMCP
+from src.mcp.tools.add_task import add_task as add_task_fn
+# ... import other tools
+
+# Create FastMCP server instance
+mcp = FastMCP(
+    name="todo-mcp-server",
+    description="MCP server for managing tasks.",
+    # ... other configuration
+)
+
+# Register the tool with the server
+@mcp.tool()
+def add_task(
+    title: str,
+    description: str | None = None,
+    # Session and user_id are injected via dependencies, not part of public schema
+) -> dict:
+    # This just defines the schema for the agent.
+    # The actual implementation is in add_task_fn.
+    pass
+
+# You would have similar @mcp.tool() definitions for list_tasks, etc.
+```
+
+##### Step 3: Expose via FastAPI
+
+Finally, expose the MCP server and a chat endpoint through your main FastAPI application.
+
+`backend/src/main.py`:
+```python
+# ... imports
+from src.api.routes.chat import router as chat_router
+from src.api.routes.mcp import router as mcp_router
+
+app = FastAPI()
+
+# Include the router for the chat endpoint
+app.include_router(chat_router, prefix="/api", tags=["Chat"])
+# Include the router for MCP tool discovery and health checks
+app.include_router(mcp_router, prefix="/api/mcp", tags=["MCP"])
+```
+
+**Key Advantages of MCP Pattern:**
+-   **AI-Native:** Designed for AI agents to discover and use tools.
+-   **Decoupled:** The AI agent (logic) is decoupled from the tools (actions).
+-   **Scalable:** The stateless nature of tools allows for easy scaling.
+-   **Extensible:** Adding new capabilities is as simple as creating a new tool function.
+
+---
+
+### **2. Legacy RESTful Pattern (Phase II)**
+
+This is the traditional approach for building web and mobile backends. It involves creating a unique HTTP endpoint (e.g., `POST /api/tasks`) for each CRUD operation. This pattern is still perfectly valid for services that are not driven by an AI agent.
+
 
 # Backend CRUD API with JWT Authentication
 

@@ -2,52 +2,55 @@
 
 <!--
 Sync Impact Report:
-Version: 1.3.0 → 1.4.0 (MINOR: Comprehensive Phase II Expansion + Gradual Implementation Principle)
+Version: 1.4.0 → 1.5.0 (MINOR: Phase III Chatbot Specifications)
 
 Changes:
-- Massively expanded Phase II section with comprehensive technical specifications
-- Added new Principle VIII: Gradual Feature Implementation
-- Added Phase II-specific testing requirements to Development Standards
-- Added detailed authentication architecture for Phase II
-- Specified complete API endpoint contracts
-- Defined monorepo structure with .spec-kit/config.yaml requirements
-- Added Phase II Definition of Done (MVP + Production-Ready) matching Phase I detail level
-- Added Phase II Feature Implementation Hierarchy with 5 ordered stages
-- Specified deployment requirements (Vercel + demo video)
+- Expanded Phase III section with focused technical specifications
+- Added MCP (Model Context Protocol) architecture details
+- Specified OpenAI Agents SDK integration requirements
+- Defined stateless chat endpoint architecture
+- Added database models for conversations and messages
+- Specified 5 MCP tools with signatures
+- Added natural language interaction examples
+- Defined OpenAI ChatKit setup requirements
+- Added Phase III Definition of Done
+- Specified deliverables and branch naming
 
 New Sections Added:
-1. Principle VIII: Gradual Feature Implementation (emphasizes hierarchical feature building)
-2. Phase II: Complete technical specifications including:
-   - Gradual Implementation Strategy
-   - Technology Stack with versions
-   - API Endpoints (6 RESTful routes)
-   - Authentication & Security Architecture
-   - Monorepo Structure Requirements
-   - Data Models (Task, User)
-   - Definition of Done (MVP + Production-Ready)
-   - Feature Implementation Hierarchy (5 stages)
+1. Phase III: AI-Powered Todo Chatbot including:
+   - Core Architecture (stateless endpoint + MCP tools)
+   - Technology Stack (ChatKit, Agents SDK, MCP SDK)
+   - Database Models (Conversation, Message)
+   - MCP Tools Specification (5 tools)
+   - Natural Language Examples
+   - Stateless Request Cycle (9 steps)
+   - OpenAI ChatKit Setup
+   - Definition of Done
    - Deliverables
+   - Constitution Compliance
 
 Modified Sections:
-- Development Standards: Added Phase II Coverage Requirements (75% MVP, 85% Production-Ready)
-- Phase II: Expanded from 13 lines to 180+ lines with production-grade specifications
+- Phase III: Expanded from 11 lines to ~80 lines with production-ready specifications
+- Maintained conciseness while covering all hackathon requirements
 
 Templates Requiring Updates:
-✅ spec-template.md - already supports priority-based user stories
-✅ plan-template.md - already supports web application structure (Option 2)
-✅ tasks-template.md - supports gradual implementation via priority ordering
-⚠️ Need to create .spec-kit/config.yaml for Phase II monorepo
+✅ spec-template.md - supports AI/chatbot features
+✅ plan-template.md - supports MCP architecture
+✅ tasks-template.md - supports gradual chatbot implementation
+⚠️ Need to add MCP server documentation when implementing Phase III
 
 Rationale for MINOR version bump:
-- Significant Phase II material added (from outline to comprehensive spec)
-- New Principle VIII added for gradual implementation methodology
-- Non-breaking: Phase I remains unchanged, Phase II is additive
-- Enables Phase II execution with same rigor as Phase I
+- Significant Phase III material added (from brief outline to actionable spec)
+- Non-breaking: Phase I and II remain unchanged, Phase III is additive
+- Enables Phase III execution with clear requirements
+- Aligns with hackathon PDF requirements
 
 Follow-up TODOs:
-- Create .spec-kit/config.yaml when starting Phase II (specs_dir: specs, features_dir: specs/features)
-- Set up BETTER_AUTH_SECRET environment variable for Phase II authentication
-- Configure Neon PostgreSQL connection string in Phase II .env
+- Create /specs/features/007-chatbot-mcp/ when starting Phase III
+- Set up OpenAI API key for Agents SDK
+- Configure NEXT_PUBLIC_OPENAI_DOMAIN_KEY for ChatKit
+- Add domain to OpenAI platform allowlist
+- Create database migrations for conversations and messages tables
 </thinking>
 -->
 
@@ -503,16 +506,86 @@ class Task(SQLModel, table=True):
 - MUST use monorepo structure per Principle IV
 - MUST achieve Definition of Done before claiming Phase II complete
 
-### Phase III: AI-Powered Chatbot
+### Phase III: AI-Powered Todo Chatbot
 
-**Scope**: Add conversational AI interface using OpenAI Agents SDK or MCP SDK. Support natural language task management. Include Urdu support (+100 bonus).
+**Scope**: Create an AI-powered chatbot interface for managing todos through natural language using MCP (Model Context Protocol) server architecture. Users interact via conversational UI instead of traditional forms. All Basic Level features (Add, Delete, Update, View, Mark Complete) accessible through natural language commands.
 
-**Technology**: OpenAI Agents SDK, MCP SDK, LangChain/LlamaIndex (optional).
+**Core Architecture**: Stateless chat endpoint + OpenAI Agents SDK + MCP Tools + Database persistence
+- Chat endpoint: POST /api/{user_id}/chat (receives message, returns AI response)
+- Conversation state stored in database (conversations, messages tables)
+- Server holds NO state between requests (horizontally scalable)
+- MCP server exposes 5 tools: add_task, list_tasks, complete_task, delete_task, update_task
+
+**Technology Stack**:
+- **Frontend**: OpenAI ChatKit (conversational UI)
+- **Backend**: FastAPI (chat endpoint + MCP server)
+- **AI Framework**: OpenAI Agents SDK (agent orchestration)
+- **MCP**: Official MCP SDK (tool server)
+- **Database**: Neon PostgreSQL (tasks + conversations + messages)
+- **Authentication**: Better Auth + JWT (same as Phase II)
+
+**Database Models**:
+- Task: (existing from Phase II)
+- Conversation: user_id, id, created_at, updated_at
+- Message: user_id, conversation_id, role (user/assistant), content, created_at
+
+**MCP Tools Specification** (each tool stateless, stores to DB):
+- `add_task(user_id, title, description)` → Returns task_id, status, title
+- `list_tasks(user_id, status)` → Returns array of task objects
+- `complete_task(user_id, task_id)` → Returns task_id, status, title
+- `delete_task(user_id, task_id)` → Returns task_id, status, title
+- `update_task(user_id, task_id, title?, description?)` → Returns task_id, status, title
+
+**Natural Language Examples**:
+- "Add a task to buy groceries" → calls add_task
+- "Show me pending tasks" → calls list_tasks with status="pending"
+- "Mark task 3 as done" → calls complete_task
+- "Delete the meeting task" → calls list_tasks then delete_task
+
+**Stateless Request Cycle** (critical for scalability):
+1. Receive user message
+2. Fetch conversation history from database
+3. Build message array (history + new message)
+4. Store user message in database
+5. Run OpenAI Agent with MCP tools
+6. Agent invokes appropriate MCP tool(s)
+7. Store assistant response in database
+8. Return response to client
+9. Server ready for next request (no state held)
+
+**OpenAI ChatKit Setup**:
+- Domain allowlist: Add deployed frontend URL to OpenAI platform
+- Domain key: Configure NEXT_PUBLIC_OPENAI_DOMAIN_KEY
+- Required for hosted ChatKit (localhost works without)
+
+**Definition of Done**:
+- ✅ MCP server with all 5 tools functional
+- ✅ OpenAI Agent successfully calls tools based on natural language
+- ✅ Chat endpoint persists conversations to database
+- ✅ ChatKit UI integrated and functional
+- ✅ Stateless architecture (server restarts don't lose conversations)
+- ✅ All Phase II features accessible via chatbot
+- ✅ Agent behavior handles errors gracefully
+- ✅ Authentication enforces user isolation
+- ✅ Deployed chatbot URL functional
+- ✅ Demo video (<90 seconds) showing natural language interactions
+
+**Deliverables**:
+- `/frontend` - ChatKit-based UI
+- `/backend` - FastAPI + Agents SDK + MCP server
+- `/specs/features/007-chatbot-mcp/` - Spec, plan, tasks
+- Database migration for conversations and messages
+- README with MCP server setup instructions
+- Deployed application with chatbot interface
+
+**Branch**: `007-chatbot-mcp`
 
 **Constitution Compliance**:
 - Design chatbot as Reusable Intelligence component (Principle III)
-- Multi-language support earns bonus points (Principle VI)
-- Consider voice command integration (+200 bonus)
+- MCP tools follow stateless pattern (Principle VII - scalability)
+- Multi-language support (Urdu) earns +100 bonus (Principle VI)
+- Voice command integration earns +200 bonus (Principle VI)
+- Follow SDD workflow: spec → plan → tasks → implement (Principle II)
 
 ### Phase IV: Local Kubernetes Deployment
 
@@ -548,4 +621,4 @@ All pull requests and reviews MUST verify compliance with this constitution. Com
 
 Use `CLAUDE.md` for runtime development guidance and session tracking.
 
-**Version**: 1.4.0 | **Ratified**: 2025-12-17 | **Last Amended**: 2025-12-18
+**Version**: 1.5.0 | **Ratified**: 2025-12-17 | **Last Amended**: 2026-01-03

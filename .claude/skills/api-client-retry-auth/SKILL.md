@@ -237,6 +237,49 @@ clearApiToken(); // Remove JWT from localStorage
 router.push('/login');
 ```
 
+## Integration with ChatKit and SDK-based Clients
+
+When integrating with third-party SDKs like OpenAI ChatKit, the `apiClient` may not be directly used for every API call. These SDKs often manage their own internal HTTP requests. However, authentication remains crucial.
+
+**Challenge:** How to ensure the ChatKit SDK (or any other SDK) sends the correct JWT token to your backend.
+
+**Solution Approaches:**
+
+1.  **SDK Configuration:** Many SDKs offer configuration options to inject custom headers or provide a token factory function.
+    *   **Example (Conceptual ChatKit configuration):** Look for parameters like `headers`, `authProvider`, or `tokenFactory` during initialization.
+
+    ```typescript
+    // Conceptual example - actual ChatKit config might vary
+    import { ChatKit } from '@openai/chatkit';
+    import { getApiToken } from '@/lib/api/client'; // Your helper to get JWT
+
+    const chatkit = new ChatKit({
+      // ... other config
+      authProvider: async () => {
+        const token = await getApiToken(); // Retrieve current valid JWT
+        return {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        };
+      },
+      // OR a direct token if SDK supports it
+      // token: getApiToken(),
+    });
+    ```
+
+2.  **Backend Session Endpoint:** ChatKit, for example, often uses a backend endpoint to establish its session (e.g., `/api/chatkit/session`). Your backend is responsible for generating the session configuration, and this is where you can inject authentication context.
+
+    *   **Example (FastAPI backend for ChatKit session):**
+        When your frontend calls `/api/chatkit/session`, your backend can use the JWT from the frontend's request to authenticate the user and then generate a ChatKit session configuration that includes the user's ID or any other necessary authenticated context. The ChatKit SDK then uses this configuration for its subsequent calls.
+
+3.  **Proxying:** In some cases, you might proxy SDK-initiated requests through your own backend to inject authentication headers or perform additional processing. This is more complex but offers maximum control.
+
+**General Advice for SDK Integration:**
+-   **Review SDK Documentation:** Look for authentication, `headers`, or `client configuration` sections.
+-   **Identify Session Endpoints:** If the SDK relies on your backend for session initialization, this is a prime place to inject authentication.
+-   **Prioritize Server-Side Logic:** If possible, let your backend handle token validation and user context injection into the SDK's flow, ensuring that client-side tokens are handled securely.
+
 ## Testing
 
 ```typescript
