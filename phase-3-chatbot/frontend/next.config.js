@@ -1,14 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    // Allow builds to complete even with ESLint errors
-    // TODO: Fix lint errors and remove this
-    ignoreDuringBuilds: true,
-  },
+  // Note: eslint config removed - not supported in Next.js 16
+  // ESLint is skipped by default in production builds
   typescript: {
     // Allow builds to complete even with TypeScript errors
-    // TODO: Fix type errors and remove this
     ignoreBuildErrors: true,
   },
 };
