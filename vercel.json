@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "phase-3-chatbot/frontend/next.config.js",
+      "use": "@vercel/next"
+    }
+  ]
+}
