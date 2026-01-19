@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Disable Turbopack to avoid HMR panics in dev mode (Next.js 16 issue)
   devIndicators: false,
+  // Use Webpack instead of Turbopack for builds
+  experimental: {
+    turbo: false,
+  },
 };
 
 module.exports = nextConfig;
