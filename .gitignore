@@ -106,3 +106,5 @@ test-results/
 /Capture.PNG
 /next
 /hackathon-todo-frontend@*
+.vercel
+.env*.local
