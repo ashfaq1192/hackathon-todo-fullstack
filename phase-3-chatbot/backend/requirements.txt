@@ -8,3 +8,4 @@ swarm @ git+https://github.com/openai/swarm.git
 openai>=1.0.0
 tiktoken
 tenacity
+sse-starlette>=1.6.0
