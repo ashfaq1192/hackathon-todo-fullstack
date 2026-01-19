@@ -9,3 +9,4 @@ openai>=1.0.0
 tiktoken
 tenacity
 sse-starlette>=1.6.0
+mcp>=1.0.0
