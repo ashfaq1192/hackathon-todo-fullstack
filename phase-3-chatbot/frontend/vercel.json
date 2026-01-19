@@ -23,10 +23,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@backend-url",
-    "BETTER_AUTH_URL": "@frontend-url",
-    "NEXT_PUBLIC_BETTER_AUTH_URL": "@frontend-url"
-  }
+  ]
 }
