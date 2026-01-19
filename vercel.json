@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "phase-3-chatbot/frontend/next.config.js",
+      "src": "phase-3-chatbot/frontend/package.json",
       "use": "@vercel/next"
     }
   ]
