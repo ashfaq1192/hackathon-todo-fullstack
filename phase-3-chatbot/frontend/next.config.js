@@ -7,7 +7,11 @@ const nextConfig = {
     // Allow builds to complete even with TypeScript errors
     ignoreBuildErrors: true,
   },
-  turbopack: {}, // Add an empty turbopack config to silence the error
+  turbopack: {
+    resolveAlias: {
+      '@': require('path').join(__dirname, '.'),
+    },
+  },
 };
 
 module.exports = nextConfig;
