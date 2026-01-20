@@ -2,7 +2,7 @@
  * Dashboard Page
  *
  * Main dashboard view for authenticated users.
- * Shows task list, create task form, and task management.
+ * Shows task list, create task form, task management, and chat widget.
  */
 
 'use client';
@@ -13,6 +13,9 @@ import { useRouter } from 'next/navigation';
 import { apiClient, initializeApiToken, getUserId } from '@/lib/api/client';
 import { AddTodoForm } from '@/components/todos/AddTodoForm';
 import { TodoList } from '@/components/todos/TodoList';
+import { ChatWidgetFAB } from '@/components/chat/ChatWidgetFAB';
+import { ChatWidget } from '@/components/chat/ChatWidget';
+import { TaskProvider } from '@/contexts/TaskContext';
 import type { Task, TaskCreate, TaskPatch } from '@/types/task';
 
 export default function DashboardPage() {
@@ -152,8 +155,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Header */}
+    <TaskProvider>
+      <div className="space-y-6">
+        {/* Welcome Header */}
       <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg px-8 py-8 text-white">
         <div className="flex items-center space-x-3 mb-3">
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,6 +213,11 @@ export default function DashboardPage() {
           isLoading={isLoading && !session}
         />
       </div>
+
+      {/* Chat Widget */}
+      <ChatWidgetFAB />
+      <ChatWidget />
     </div>
+    </TaskProvider>
   );
 }

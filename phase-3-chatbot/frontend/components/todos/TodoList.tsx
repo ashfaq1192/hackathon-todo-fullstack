@@ -6,21 +6,18 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TodoItem } from './TodoItem';
 import type { Task, TaskPatch, TaskPriority } from '@/types/task';
+import { useTaskContext } from '@/contexts/TaskContext';
 
-interface TodoListProps {
-  todos: Task[];
-  onUpdate: (todoId: number, updates: TaskPatch) => Promise<void>;
-  onDelete: (todoId: number) => Promise<void>;
-  isLoading?: boolean;
-}
+interface TodoListProps {}
 
 type FilterType = 'all' | 'active' | 'completed';
 type PriorityFilterType = 'all' | 'low' | 'medium' | 'high';
 
-export function TodoList({ todos, onUpdate, onDelete, isLoading = false }: TodoListProps) {
+export function TodoList({}: TodoListProps) {
+  const { tasks, isLoading, error, updateTask, deleteTask, fetchTasks } = useTaskContext();
   const [filter, setFilter] = useState<FilterType>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');

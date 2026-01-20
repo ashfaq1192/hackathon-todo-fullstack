@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { TaskCreate, TaskPriority } from '@/types/task';
+import { useTaskContext } from '@/contexts/TaskContext';
 
 // Validation schema
 const todoSchema = z.object({
@@ -22,12 +23,10 @@ const todoSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']).optional(),
 });
 
-interface AddTodoFormProps {
-  onSubmit: (data: TaskCreate) => Promise<void>;
-  isLoading?: boolean;
-}
+interface AddTodoFormProps {}
 
-export function AddTodoForm({ onSubmit, isLoading = false }: AddTodoFormProps) {
+export function AddTodoForm({}: AddTodoFormProps) {
+  const { addTask, isLoading } = useTaskContext();
   const [apiError, setApiError] = useState<string | null>(null);
 
   const {
@@ -43,7 +42,7 @@ export function AddTodoForm({ onSubmit, isLoading = false }: AddTodoFormProps) {
     setApiError(null);
 
     try {
-      await onSubmit(data);
+      await addTask(data);
       reset(); // Clear form after successful submission
     } catch (error) {
       if (error instanceof Error) {
