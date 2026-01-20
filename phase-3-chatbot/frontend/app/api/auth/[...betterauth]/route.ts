@@ -10,7 +10,7 @@
  * Better Auth automatically provides these endpoints.
  */
 
-import { auth } from "../../../lib/auth/auth";
+import { auth } from "@/lib/auth/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
 // Export GET and POST handlers for Better Auth

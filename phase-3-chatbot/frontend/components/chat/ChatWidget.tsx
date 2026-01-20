@@ -13,10 +13,10 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { useChatWidget } from '../hooks/useChatWidget';
-import { useChatMessages } from '../hooks/useChatMessages';
-import { useTaskSync } from '../hooks/useTaskSync'; // Import useTaskSync
-import { Portal } from '../components/ui/Portal';
+import { useChatWidget } from '@/hooks/useChatWidget';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { useTaskSync } from '@/hooks/useTaskSync';
+import { Portal } from '@/components/ui/Portal';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 
@@ -94,15 +94,22 @@ export function ChatWidget() {
     <Portal>
       <div
         ref={chatWidgetRef}
-        className={`fixed bottom-6 right-6 z-[9999] flex flex-col overflow-hidden rounded-xl bg-white shadow-2xl transition-all duration-200 ease-in-out
-          w-[calc(100vw-32px)] h-[60vh] md:w-[400px] md:h-[500px] lg:w-[380px]
+        className={`fixed z-[9999] flex flex-col overflow-hidden rounded-xl bg-white shadow-2xl transition-all duration-200 ease-in-out
+          bottom-3 right-3 left-3 h-[70vh] max-h-[600px]
+          sm:left-auto sm:bottom-4 sm:right-4 sm:w-[380px] sm:h-[500px]
+          md:bottom-6 md:right-6 md:w-[400px] md:h-[520px]
+          lg:w-[380px] lg:h-[500px]
           ${
             mode === 'open'
               ? 'opacity-100 scale-100 translate-y-0'
               : mode === 'minimized'
                 ? 'opacity-0 scale-90 translate-y-full pointer-events-none'
-                : 'opacity-0 scale-95 pointer-events-none' // closed
+                : 'opacity-0 scale-95 pointer-events-none'
           }`}
+        style={{
+          /* Safe area for notched phones */
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
         role="dialog"
         aria-labelledby="chat-widget-title"
         aria-modal="true"

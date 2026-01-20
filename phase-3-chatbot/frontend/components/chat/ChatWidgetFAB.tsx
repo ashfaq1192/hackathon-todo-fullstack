@@ -26,7 +26,11 @@ export function ChatWidgetFAB() {
   return (
     <button
       onClick={handleClick}
-      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      className="fixed bottom-4 right-4 z-[9998] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:bottom-5 sm:right-5 md:bottom-6 md:right-6 active:scale-95"
+      style={{
+        /* Safe area inset for notched phones */
+        marginBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       aria-label={hasUnreadMessages ? 'Open chat (new messages)' : 'Open chat assistant'}
       aria-expanded={isOpen}
     >

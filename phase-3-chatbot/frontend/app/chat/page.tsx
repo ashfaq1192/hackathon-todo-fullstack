@@ -1,7 +1,7 @@
 "use client";
 
-import { ChatWidget } from "@/components/chat/ChatWidget";
+import ChatInterface from "@/components/chat/ChatInterface";
 
 export default function ChatPage() {
-  return <ChatWidget />;
+  return <ChatInterface />;
 }

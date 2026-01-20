@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ChatMessage, ToolCallEvent, TaskToolName } from '../types/chat';
-import { useChatWidget } from './useChatWidget';
-import toast from 'react-hot-toast'; // Import toast
+import type { ChatMessage, ToolCallEvent, TaskToolName } from '@/types/chat';
+import { useChatWidget } from '@/hooks/useChatWidget';
+import toast from 'react-hot-toast';
 
 interface UseChatMessagesOptions {
   /** Callback when a tool call is detected (for task sync) */
@@ -19,6 +19,7 @@ interface UseChatMessagesReturn {
   sendMessage: (content: string) => Promise<void>;
   clearMessages: () => void;
   loadHistory: () => Promise<void>;
+  cancelRequest: () => void;
 }
 
 // API endpoint
@@ -112,6 +113,60 @@ export function useChatMessages(
       throw err;
     }
   }, [maxRetries]);
+
+  /**
+   * Load message history from existing thread
+   */
+  const loadHistory = useCallback(async () => {
+    if (!threadId || historyLoadedRef.current) return;
+
+    try {
+      const token = await getAuthToken();
+
+      const response = await fetch(
+        `${API_ENDPOINT}/api/chatkit/threads/${threadId}/messages`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        // Thread might not exist anymore - that's OK, start fresh
+        if (response.status === 404) {
+          setThreadId('');
+          return;
+        }
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+        throw new Error('Failed to load message history');
+      }
+
+      const data = await response.json();
+
+      // Convert API messages to our format
+      if (data.messages && Array.isArray(data.messages)) {
+        const loadedMessages: ChatMessage[] = data.messages.map(
+          (msg: { id?: string; role: string; content: string; created_at?: string }) => ({
+            id: msg.id || generateMessageId(),
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: msg.created_at ? new Date(msg.created_at) : new Date(),
+            isStreaming: false,
+          })
+        );
+
+        setMessages(loadedMessages);
+        historyLoadedRef.current = true;
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+      // Don't set error state - just start fresh
+    }
+  }, [threadId, setThreadId]);
 
   /**
    * Send a message and handle SSE streaming response
@@ -332,7 +387,7 @@ export function useChatMessages(
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setIsLoading(false);
-      toast.info('Chat response cancelled.');
+      toast('Chat response cancelled.', { icon: 'ℹ️' });
     }
   }, []);
 
@@ -363,5 +418,8 @@ export function useChatMessages(
     sendMessage,
     clearMessages,
     loadHistory,
-    cancelRequest, // Expose cancelRequest
+    cancelRequest,
   };
+}
+
+export default useChatMessages;

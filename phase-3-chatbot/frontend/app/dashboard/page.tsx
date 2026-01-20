@@ -7,18 +7,31 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from '../../lib/auth/client';
+import { useEffect } from 'react';
+import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
-import { apiClient, initializeApiToken, getUserId } from '../../lib/api/client';
-import { AddTodoForm } from '../../components/todos/AddTodoForm';
-import { TodoList } from '../../components/todos/TodoList';
-import { ChatWidgetFAB } from '../../components/chat/ChatWidgetFAB';
-import { ChatWidget } from '../../components/chat/ChatWidget';
-import { TaskProvider, useTaskContext } from '../../contexts/TaskContext';
-import type { Task, TaskCreate, TaskPatch } from '../../types/task';
+import { initializeApiToken, getUserId } from '@/lib/api/client';
+import { AddTodoForm } from '@/components/todos/AddTodoForm';
+import { TodoList } from '@/components/todos/TodoList';
+import { ChatWidgetFAB } from '@/components/chat/ChatWidgetFAB';
+import { ChatWidget } from '@/components/chat/ChatWidget';
+import { TaskProvider, useTaskContext } from '@/contexts/TaskContext';
 
+/**
+ * Dashboard page wrapper - provides TaskProvider
+ */
 export default function DashboardPage() {
+  return (
+    <TaskProvider>
+      <DashboardContent />
+    </TaskProvider>
+  );
+}
+
+/**
+ * Dashboard content - uses TaskContext hooks
+ */
+function DashboardContent() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const { fetchTasks, isLoading, error } = useTaskContext();
@@ -38,27 +51,23 @@ export default function DashboardPage() {
             throw new Error('Failed to get user ID after token initialization.');
           }
         }
-        await fetchTasks(); // Fetch tasks using TaskContext
+        await fetchTasks();
       } catch (err) {
         console.error('Initialization error:', err);
-        // Optionally, display a global error or redirect to login if initialization fails
         if (err instanceof Error && err.message === 'Unauthorized') {
           router.push('/login');
-        } else {
-          // Handle other initialization errors
         }
       }
     };
 
-    if (session && !isLoading) { // Only initialize if session exists and TaskContext isn't already loading
+    if (session && !isLoading) {
       initializeSessionAndTasks();
     } else if (!isPending && !session) {
       router.push('/login');
     }
   }, [session, isPending, fetchTasks, isLoading, router]);
 
-
-  // Redirect if not authenticated (handled by useEffect above, but this provides a visual loading state)
+  // Loading state
   if (isPending || !session) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -67,9 +76,8 @@ export default function DashboardPage() {
     );
   }
 
-  // The rest of the component will consume tasks and state from TaskContext directly
   return (
-    <TaskProvider>
+    <>
       <div className="space-y-6">
         {/* Welcome Header */}
       <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg px-8 py-8 text-white">
@@ -127,6 +135,6 @@ export default function DashboardPage() {
       <ChatWidgetFAB />
       <ChatWidget />
     </div>
-    </TaskProvider>
+    </>
   );
 }

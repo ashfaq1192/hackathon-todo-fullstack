@@ -1,64 +1,93 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { useChatWidget } from './useChatWidget';
-import { useChatMessages } from './useChatMessages';
-import { useTaskContext } from '../contexts/TaskContext';
-import type { ToolCallEvent } from '../types/chat';
-
 /**
  * useTaskSync Hook
  *
- * This hook integrates with the chat widget to listen for specific
- * tool_call events from the AI assistant that indicate a modification
- * to the user's task list (add, complete, delete, update).
+ * Detects tool_call SSE events and triggers task list refresh.
+ * Provides a debounced refresh to avoid excessive API calls when
+ * multiple task operations occur in quick succession.
  *
- * Upon detecting such an event, it triggers a refresh of the task list
- * in the TaskContext, ensuring the dashboard view is always up-to-date
- * with changes made through the chat interface.
+ * Used by ChatWidget to sync dashboard task list in real-time (US3).
  */
-export function useTaskSync() {
-  const { triggerRefresh } = useTaskContext();
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced refresh function
+import { useCallback, useRef } from 'react';
+import { useTaskContext } from '@/contexts/TaskContext';
+import type { ToolCallEvent } from '@/types/chat';
+
+// Tool names that modify tasks
+const TASK_MODIFYING_TOOLS = [
+  'add_task',
+  'complete_task',
+  'delete_task',
+  'update_task',
+] as const;
+
+// Debounce delay in milliseconds
+const DEBOUNCE_DELAY = 300;
+
+interface UseTaskSyncReturn {
+  /** Handler for tool call events - triggers debounced task refresh */
+  handleToolCall: (event: ToolCallEvent) => void;
+  /** Force immediate task refresh (bypasses debounce) */
+  forceRefresh: () => void;
+}
+
+/**
+ * useTaskSync - Hook for syncing tasks when AI modifies them
+ */
+export function useTaskSync(): UseTaskSyncReturn {
+  const { triggerRefresh } = useTaskContext();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Debounced refresh - waits for DEBOUNCE_DELAY ms of inactivity
+   * before triggering the actual refresh
+   */
   const debouncedRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
+    // Clear any existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
-    refreshTimeoutRef.current = setTimeout(() => {
+
+    // Set new timer
+    debounceTimerRef.current = setTimeout(() => {
       triggerRefresh();
-    }, 300); // 300ms debounce
+      debounceTimerRef.current = null;
+    }, DEBOUNCE_DELAY);
   }, [triggerRefresh]);
 
-  // Callback to be passed to useChatMessages
+  /**
+   * Handle tool call events from SSE stream
+   * Triggers task refresh for task-modifying operations
+   */
   const handleToolCall = useCallback(
     (event: ToolCallEvent) => {
-      // Tool names that affect task list
-      const taskModifyingTools = [
-        'add_task',
-        'complete_task',
-        'delete_task',
-        'update_task',
-        'list_tasks', // Including list_tasks as it might involve filtering/sorting that affects display
-      ];
-
-      if (taskModifyingTools.includes(event.name)) {
-        // Trigger debounced task list refresh
+      // Check if this tool modifies tasks
+      if (TASK_MODIFYING_TOOLS.includes(event.name as (typeof TASK_MODIFYING_TOOLS)[number])) {
+        // Trigger debounced refresh
         debouncedRefresh();
       }
     },
     [debouncedRefresh]
   );
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
+  /**
+   * Force immediate refresh (bypasses debounce)
+   */
+  const forceRefresh = useCallback(() => {
+    // Clear any pending debounced refresh
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    // Trigger immediate refresh
+    triggerRefresh();
+  }, [triggerRefresh]);
 
-  return { handleToolCall };
+  return {
+    handleToolCall,
+    forceRefresh,
+  };
 }
+
+export default useTaskSync;

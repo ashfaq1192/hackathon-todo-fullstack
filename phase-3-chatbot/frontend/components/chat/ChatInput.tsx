@@ -20,7 +20,7 @@ interface ChatInputProps {
   disabled?: boolean;
   showVoiceInput?: boolean;
   placeholder?: string;
-  inputRef?: RefObject<HTMLTextAreaElement>;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
 }
 
 /**
@@ -71,10 +71,10 @@ export function ChatInput({
   const canSend = input.trim().length > 0 && !isDisabled;
 
   return (
-    <div className="border-t border-gray-200 bg-white p-3">
-      {/* Voice Input (optional) */}
+    <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3">
+      {/* Voice Input (optional) - hidden on very small screens */}
       {showVoiceInput && (
-        <div className="mb-2">
+        <div className="mb-2 hidden sm:block">
           <VoiceInput onTranscript={handleVoiceTranscript} disabled={isDisabled} />
         </div>
       )}
@@ -82,11 +82,26 @@ export function ChatInput({
       {/* Text Input Form */}
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
         <textarea
-          ref={inputRef} // Assign the ref here
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          /* text-base (16px) prevents iOS zoom on focus */
+          className="max-h-24 min-h-[44px] flex-1 resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-base text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:text-white sm:text-sm sm:min-h-[40px] sm:py-2"
+          rows={1}
+          disabled={isDisabled}
+          aria-label="Message input"
+          /* Prevent auto-zoom on iOS */
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="sentences"
+        />
         <button
           type="submit"
           disabled={!canSend}
-          className="flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          /* Larger touch target on mobile (44px minimum) */
+          className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:w-auto sm:px-4 sm:text-sm sm:font-medium"
           aria-label="Send message"
         >
           {isLoading ? (
@@ -127,8 +142,8 @@ export function ChatInput({
         </button>
       </form>
 
-      {/* Hint text */}
-      <p className="mt-1.5 text-center text-[10px] text-gray-400">
+      {/* Hint text - hidden on mobile to save space */}
+      <p className="mt-1.5 hidden text-center text-[10px] text-gray-400 sm:block">
         Press Enter to send, Shift+Enter for new line
       </p>
     </div>
