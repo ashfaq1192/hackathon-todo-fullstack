@@ -11,6 +11,7 @@ const nextConfig = {
     config.resolve.alias['@'] = require('path').join(__dirname, '.');
     return config;
   },
+  turbopack: {}, // Add an empty turbopack config to silence the error
 };
 
 module.exports = nextConfig;
