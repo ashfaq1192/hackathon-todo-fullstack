@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ChatMessage, ToolCallEvent, TaskToolName } from '@/types/chat';
+import type { ChatMessage, ToolCallEvent, TaskToolName } from '../types/chat';
 import { useChatWidget } from './useChatWidget';
 import toast from 'react-hot-toast'; // Import toast
 

@@ -11,10 +11,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import type { TaskCreate, TaskPriority } from '@/types/task';
-import { useTaskContext } from '@/contexts/TaskContext';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import type { TaskCreate, TaskPriority } from '../../types/task';
+import { useTaskContext } from '../../contexts/TaskContext';
 
 // Validation schema
 const todoSchema = z.object({

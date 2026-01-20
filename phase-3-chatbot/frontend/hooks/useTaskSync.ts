@@ -3,8 +3,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useChatWidget } from './useChatWidget';
 import { useChatMessages } from './useChatMessages';
-import { useTaskContext } from '@/contexts/TaskContext';
-import type { ToolCallEvent } from '@/types/chat';
+import { useTaskContext } from '../contexts/TaskContext';
+import type { ToolCallEvent } from '../types/chat';
 
 /**
  * useTaskSync Hook

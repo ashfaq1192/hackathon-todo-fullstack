@@ -20,8 +20,8 @@ import {
   parseTaskList,
   formatActionMessage,
   type ParsedTask,
-} from '@/lib/chat/messageUtils';
-import type { ChatMessage } from '@/types/chat';
+} from '../../lib/chat/messageUtils';
+import type { ChatMessage } from '../../types/chat';
 
 // ============================================================================
 // Sub-components

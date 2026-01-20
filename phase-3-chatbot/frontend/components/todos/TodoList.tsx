@@ -8,8 +8,8 @@
 
 import { useState, useEffect } from 'react';
 import { TodoItem } from './TodoItem';
-import type { Task, TaskPatch, TaskPriority } from '@/types/task';
-import { useTaskContext } from '@/contexts/TaskContext';
+import type { Task, TaskPatch, TaskPriority } from '../../types/task';
+import { useTaskContext } from '../../contexts/TaskContext';
 
 interface TodoListProps {}
 

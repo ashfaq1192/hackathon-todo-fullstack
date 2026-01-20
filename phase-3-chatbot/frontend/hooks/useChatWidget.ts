@@ -1,7 +1,7 @@
 'use client';
 
-import { useChatWidgetContext } from '@/contexts/ChatWidgetContext';
-import type { ChatWidgetContextValue } from '@/types/chat-widget';
+import { useChatWidgetContext } from '../contexts/ChatWidgetContext';
+import type { ChatWidgetContextValue } from '../types/chat-widget';
 
 /**
  * Hook for managing chat widget state.

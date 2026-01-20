@@ -13,10 +13,10 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { useChatWidget } from '@/hooks/useChatWidget';
-import { useChatMessages } from '@/hooks/useChatMessages';
-import { useTaskSync } from '@/hooks/useTaskSync'; // Import useTaskSync
-import { Portal } from '@/components/ui/Portal';
+import { useChatWidget } from '../hooks/useChatWidget';
+import { useChatMessages } from '../hooks/useChatMessages';
+import { useTaskSync } from '../hooks/useTaskSync'; // Import useTaskSync
+import { Portal } from '../components/ui/Portal';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 

@@ -13,8 +13,8 @@ import type {
   WidgetMode,
   ChatWidgetContextValue,
   WidgetPersistedState,
-} from '@/types/chat-widget';
-import { WIDGET_STORAGE_KEY } from '@/types/chat-widget';
+} from '../types/chat-widget';
+import { WIDGET_STORAGE_KEY } from '../types/chat-widget';
 
 const ChatWidgetContext = createContext<ChatWidgetContextValue | null>(null);
 

@@ -8,152 +8,66 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from '@/lib/auth/client';
+import { useSession } from '../../lib/auth/client';
 import { useRouter } from 'next/navigation';
-import { apiClient, initializeApiToken, getUserId } from '@/lib/api/client';
-import { AddTodoForm } from '@/components/todos/AddTodoForm';
-import { TodoList } from '@/components/todos/TodoList';
-import { ChatWidgetFAB } from '@/components/chat/ChatWidgetFAB';
-import { ChatWidget } from '@/components/chat/ChatWidget';
-import { TaskProvider } from '@/contexts/TaskContext';
-import type { Task, TaskCreate, TaskPatch } from '@/types/task';
+import { apiClient, initializeApiToken, getUserId } from '../../lib/api/client';
+import { AddTodoForm } from '../../components/todos/AddTodoForm';
+import { TodoList } from '../../components/todos/TodoList';
+import { ChatWidgetFAB } from '../../components/chat/ChatWidgetFAB';
+import { ChatWidget } from '../../components/chat/ChatWidget';
+import { TaskProvider, useTaskContext } from '../../contexts/TaskContext';
+import type { Task, TaskCreate, TaskPatch } from '../../types/task';
 
 export default function DashboardPage() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
-
-  const [todos, setTodos] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { fetchTasks, isLoading, error } = useTaskContext();
 
   // Initialize API token and fetch todos on mount
   useEffect(() => {
-    const initialize = async () => {
+    const initializeSessionAndTasks = async () => {
       if (!session) return;
 
       try {
-        // Get or initialize API token
-        let storedUserId = getUserId();
-
-        if (!storedUserId) {
+        let currentUserId = getUserId();
+        if (!currentUserId) {
           const tokenData = await initializeApiToken();
-          if (tokenData) {
-            storedUserId = tokenData.user_id;
+          if (tokenData && tokenData.user_id) {
+            currentUserId = tokenData.user_id;
+          } else {
+            throw new Error('Failed to get user ID after token initialization.');
           }
         }
-
-        if (storedUserId) {
-          setUserId(storedUserId);
-          await fetchTodos(storedUserId);
-        } else {
-          setError('Failed to initialize authentication. Please try logging in again.');
-        }
+        await fetchTasks(); // Fetch tasks using TaskContext
       } catch (err) {
         console.error('Initialization error:', err);
-        setError('Failed to initialize application. Please refresh the page or log in again.');
-      } finally {
-        setIsLoading(false);
+        // Optionally, display a global error or redirect to login if initialization fails
+        if (err instanceof Error && err.message === 'Unauthorized') {
+          router.push('/login');
+        } else {
+          // Handle other initialization errors
+        }
       }
     };
 
-    // Set timeout to prevent infinite loading (10 seconds)
-    const timeout = setTimeout(() => {
-      if (isLoading && !session) {
-        setIsLoading(false);
-        setError('Session loading timeout. Please refresh the page or log in again.');
-      }
-    }, 10000);
-
-    if (session) {
-      initialize();
-    } else if (!isPending) {
-      // Session is null and not pending - user not logged in
-      setIsLoading(false);
+    if (session && !isLoading) { // Only initialize if session exists and TaskContext isn't already loading
+      initializeSessionAndTasks();
+    } else if (!isPending && !session) {
+      router.push('/login');
     }
+  }, [session, isPending, fetchTasks, isLoading, router]);
 
-    return () => clearTimeout(timeout);
-  }, [session, isPending]);
 
-  // Fetch todos from API
-  const fetchTodos = useCallback(async (uid: string) => {
-    try {
-      setError(null);
-      const response = await apiClient.getTasks(uid);
-      setTodos(response.tasks);
-    } catch (err) {
-      console.error('Failed to fetch todos:', err);
-      setError('Failed to load todos');
-    }
-  }, []);
-
-  // Create new todo
-  const handleCreateTodo = async (data: TaskCreate) => {
-    if (!userId) {
-      setError('User not authenticated');
-      return;
-    }
-
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      const newTodo = await apiClient.createTask(userId, data);
-      setTodos((prev) => [newTodo, ...prev]);
-    } catch (err) {
-      console.error('Failed to create todo:', err);
-      throw err; // Re-throw to let form handle error
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  // Update todo
-  const handleUpdateTodo = async (todoId: number, updates: TaskPatch) => {
-    if (!userId) return;
-
-    try {
-      const updatedTodo = await apiClient.patchTask(userId, todoId, updates);
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === todoId ? updatedTodo : todo))
-      );
-    } catch (err) {
-      console.error('Failed to update todo:', err);
-      throw err;
-    }
-  };
-
-  // Delete todo
-  const handleDeleteTodo = async (todoId: number) => {
-    if (!userId) return;
-
-    try {
-      await apiClient.deleteTask(userId, todoId);
-      setTodos((prev) => prev.filter((todo) => todo.id !== todoId));
-    } catch (err) {
-      console.error('Failed to delete todo:', err);
-      throw err;
-    }
-  };
-
-  // Loading state
-  if (isPending || isLoading) {
+  // Redirect if not authenticated (handled by useEffect above, but this provides a visual loading state)
+  if (isPending || !session) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // Redirect if not authenticated
-  if (!session) {
-    if (typeof window !== 'undefined') {
-      router.push('/login');
-    }
-    return null;
-  }
-
+  // The rest of the component will consume tasks and state from TaskContext directly
   return (
     <TaskProvider>
       <div className="space-y-6">
@@ -193,7 +107,7 @@ export default function DashboardPage() {
             Create New Todo
           </h2>
         </div>
-        <AddTodoForm onSubmit={handleCreateTodo} isLoading={isCreating} />
+        <AddTodoForm />
       </div>
 
       {/* Todo List Section */}
@@ -206,12 +120,7 @@ export default function DashboardPage() {
             Your Todos
           </h2>
         </div>
-        <TodoList
-          todos={todos}
-          onUpdate={handleUpdateTodo}
-          onDelete={handleDeleteTodo}
-          isLoading={isLoading && !session}
-        />
+        <TodoList />
       </div>
 
       {/* Chat Widget */}
