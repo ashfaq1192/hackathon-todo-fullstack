@@ -7,6 +7,10 @@ const nextConfig = {
     // Allow builds to complete even with TypeScript errors
     ignoreBuildErrors: true,
   },
+  webpack: (config) => {
+    config.resolve.alias['@'] = require('path').join(__dirname, '.');
+    return config;
+  },
 };
 
 module.exports = nextConfig;
