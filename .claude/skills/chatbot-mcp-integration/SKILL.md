@@ -1,6 +1,6 @@
 ---
 name: chatbot-mcp-integration
-description: Comprehensive guide for building AI-powered chatbots using the Model Context Protocol (MCP) and OpenAI Agents SDK (Swarm) with a Next.js frontend and FastAPI backend. Use when implementing conversational interfaces for task management, integrating AI agents with custom tools, setting up stateless MCP servers, or building full-stack AI applications with robust authentication.
+description: Comprehensive guide for building AI-powered chatbots using the Model Context Protocol (MCP) and OpenAI Agents SDK (Swarm) with a Next.js frontend and FastAPI backend. Use when implementing conversational interfaces for task management, integrating AI agents with custom tools, setting up stateless MCP servers, building full-stack AI applications with robust authentication, or implementing chat widget overlays with real-time task sync.
 ---
 
 # Chatbot MCP Integration
@@ -10,7 +10,7 @@ description: Comprehensive guide for building AI-powered chatbots using the Mode
 This skill guides you through building a conversational AI chatbot that can execute backend operations via natural language. The architecture uses:
 
 - **Backend**: FastAPI + MCP tools + OpenAI Swarm Agent + Gemini API (free tier)
-- **Frontend**: Next.js + ChatKit or custom chat UI
+- **Frontend**: Next.js + Chat Widget Overlay or full-page chat UI
 - **Auth**: JWT tokens from Better Auth
 
 ### Implementation Sequence
@@ -18,63 +18,37 @@ This skill guides you through building a conversational AI chatbot that can exec
 1. **Define MCP Tools** (backend) - Stateless Python functions
 2. **Create Chat Service** (backend) - Swarm Agent with tools
 3. **Add Chat Endpoint** (backend) - FastAPI route with JWT auth
-4. **Build Chat UI** (frontend) - React component with API client
+4. **Build Chat UI** (frontend) - Widget overlay or full-page component
 5. **Wire Up Auth** - Pass JWT tokens to backend
+6. **Add Real-Time Sync** - SSE events trigger task list updates
 
 ---
 
 ## Step 1: Define MCP Tools
 
-MCP tools are stateless Python functions that the AI agent can invoke. Use `FastMCP` from the official MCP SDK.
+MCP tools are stateless Python functions that the AI agent can invoke.
 
 ```python
 # backend/src/mcp/server.py
 from mcp.server.fastmcp import FastMCP
-from sqlmodel import Session
 
 mcp = FastMCP(name="todo-mcp-server")
 
 @mcp.tool()
-def add_task(
-    user_id: str,
-    title: str,
-    description: str = "",
-    priority: str = "medium",
-) -> str:
-    """Create a new task for the user.
-
-    Use this tool when the user wants to add, create, or make a new task.
-
-    Args:
-        user_id: The authenticated user's ID
-        title: Task title (required, max 200 characters)
-        description: Optional task description
-        priority: 'low', 'medium', or 'high' (default: medium)
-
-    Returns:
-        JSON string with task creation result
-    """
-    db = get_db_session()
-    try:
-        # Call your CRUD function
-        result = create_task(user_id=user_id, title=title, ...)
-        return str(result)
-    finally:
-        db.close()
+def add_task(user_id: str, title: str, priority: str = "medium") -> str:
+    """Create a new task for the user."""
+    # Implementation
+    return json.dumps({"success": True, "task_id": task.id})
 
 @mcp.tool()
 def list_tasks(user_id: str, status: str = "all") -> str:
-    """List tasks for the user. Use when user wants to see their tasks."""
-    # ... implementation
+    """List tasks for the user."""
+    # Implementation
 
 @mcp.tool()
 def complete_task(user_id: str, task_id: int) -> str:
     """Mark a task as completed."""
-    # ... implementation
-
-def get_mcp_server() -> FastMCP:
-    """Return the configured MCP server instance."""
-    return mcp
+    # Implementation
 ```
 
 **Key Points:**
@@ -86,78 +60,27 @@ def get_mcp_server() -> FastMCP:
 
 ## Step 2: Create Chat Service with Swarm Agent
 
-The Chat Service uses OpenAI's Swarm framework with Gemini API as the LLM backend.
-
 ```python
 # backend/src/services/chat_service.py
 from swarm import Agent, Swarm
-from src.services.gemini_client import get_gemini_client
-from src.mcp.tools.add_task import add_task
-from src.mcp.tools.list_tasks import list_tasks
-# ... other tool imports
 
 class ChatService:
     def __init__(self, db: Session):
-        self.db = db
-        # Gemini client configured with OpenAI-compatible endpoint
-        gemini_client = get_gemini_client()
-        self.client = gemini_client.get_client()
-        self.model = gemini_client.model
-        # Initialize Swarm with Gemini-backed client
-        self.swarm_client = Swarm(client=self.client)
+        self.swarm_client = Swarm(client=get_gemini_client())
 
     def _create_agent_for_user(self, user_id: str) -> Agent:
-        """Create agent with user_id pre-bound to all tools."""
-        db = self.db
-
-        # Wrapper functions with user_id bound
-        def add_task_wrapper(title: str, description: str = "", priority: str = "medium"):
-            """Add a new task for the authenticated user."""
-            return add_task(user_id=user_id, title=title, priority=priority, db=db)
-
-        def list_tasks_wrapper(status: str = "all"):
-            """List tasks for the authenticated user."""
-            return list_tasks(user_id=user_id, status=status, db=db)
-
-        # ... other wrapper functions
-
+        # Bind user_id to all tool wrappers
         return Agent(
             name="Todo Assistant",
-            model=self.model,
-            instructions="""You are a helpful todo assistant that manages tasks.
-
-Your user_id is already bound - DO NOT ask for it. Just use the tools directly.
-
-Available tools:
-- add_task_wrapper(title, description?, priority?)
-- list_tasks_wrapper(status?)
-- complete_task_wrapper(task_id)
-- update_task_wrapper(task_id, title?, description?, priority?)
-- delete_task_wrapper(task_id)
-
-Always confirm actions with friendly responses. Use emojis.""",
-            functions=[
-                add_task_wrapper,
-                list_tasks_wrapper,
-                complete_task_wrapper,
-                update_task_wrapper,
-                delete_task_wrapper,
-            ]
+            model="gemini-2.0-flash-exp",
+            instructions="You are a helpful todo assistant...",
+            functions=[add_task_wrapper, list_tasks_wrapper, ...]
         )
 
     def process_message(self, user_message: str, user_id: str) -> dict:
-        """Process user message through Swarm Agent."""
         agent = self._create_agent_for_user(user_id)
-        messages = [{"role": "user", "content": user_message}]
-
-        response = self.swarm_client.run(agent=agent, messages=messages)
-
-        assistant_message = response.messages[-1]["content"]
-        return {
-            "success": True,
-            "message": assistant_message,
-            "tool_calls": [m.get("tool_call_id") for m in response.messages if m.get("role") == "tool"],
-        }
+        response = self.swarm_client.run(agent=agent, messages=[...])
+        return {"success": True, "message": response.messages[-1]["content"]}
 ```
 
 ---
@@ -166,211 +89,192 @@ Always confirm actions with friendly responses. Use emojis.""",
 
 ```python
 # backend/src/api/routes/chat.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlmodel import Session
-
-from src.api.dependencies import get_current_user
-from src.database import get_session
-from src.services.chat_service import ChatService
-
-router = APIRouter()
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=2000)
-    conversation_id: int | None = None
-
-class ChatResponse(BaseModel):
-    success: bool
-    message: str
-    conversation_id: int
-    tool_calls: list[str] = []
-
-@router.post("/{user_id}/chat", response_model=ChatResponse)
+@router.post("/{user_id}/chat")
 async def process_chat_message(
     user_id: str,
     request: ChatRequest,
-    current_user: str = Depends(get_current_user),  # JWT validation
-    session: Session = Depends(get_session),
-) -> ChatResponse:
-    """Process natural language message through AI assistant."""
-    # CRITICAL: Validate JWT user matches URL user
+    current_user: str = Depends(get_current_user),
+):
     if current_user != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User ID mismatch",
-        )
-
+        raise HTTPException(status_code=403, detail="User ID mismatch")
+    
     chat_service = ChatService(db=session)
-    result = chat_service.process_message(
-        user_message=request.message,
-        user_id=current_user,
-    )
-
-    return ChatResponse(
-        success=result["success"],
-        message=result["message"],
-        conversation_id=request.conversation_id or 1,
-        tool_calls=result.get("tool_calls", []),
-    )
+    return chat_service.process_message(request.message, current_user)
 ```
 
 ---
 
 ## Step 4: Build Chat UI
 
-### Option A: Custom React Chat Component
+### Option A: Chat Widget Overlay (Recommended)
 
-```tsx
-// frontend/components/chat/ChatInterface.tsx
-"use client";
+The chat widget overlay enables users to interact with the AI while viewing their task list.
 
-import { useState } from 'react';
-import { useSession } from '@/lib/auth/client';
-import { sendChatMessage } from '@/lib/api/chat';
+#### Widget Architecture
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+```
+Dashboard Page
+├── TaskProvider (global task state)
+│   └── ChatWidgetProvider (widget UI state)
+│       ├── TodoList (uses TaskContext)
+│       ├── ChatWidgetFAB (floating button)
+│       └── ChatWidget (Portal-rendered overlay)
+│           ├── ChatMessages
+│           ├── ChatInput
+│           └── useTaskSync (SSE → TaskContext sync)
+```
+
+#### Widget Modes
+
+```typescript
+type WidgetMode = 'closed' | 'open' | 'minimized';
+```
+
+#### Context Providers
+
+**ChatWidgetContext** - Widget UI state with localStorage persistence:
+
+```typescript
+interface ChatWidgetContextValue {
+  mode: WidgetMode;
+  threadId: string | null;
+  hasUnreadMessages: boolean;
+  open: () => void;
+  close: () => void;
+  minimize: () => void;
+  restore: () => void;
 }
+```
 
-export default function ChatInterface() {
-  const { data: session } = useSession();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+**TaskContext** - Task CRUD with optimistic updates:
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !session?.user?.id) return;
+```typescript
+interface TaskContextValue {
+  tasks: Task[];
+  isLoading: boolean;
+  fetchTasks: () => Promise<void>;
+  addTask: (data: TaskCreate) => Promise<Task>;
+  triggerRefresh: () => void;  // Debounced fetch
+}
+```
 
-    const userMessage = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsLoading(true);
+#### Custom Hooks
 
-    try {
-      const response = await sendChatMessage(session.user.id, userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', content: response.message }]);
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
-    } finally {
-      setIsLoading(false);
+**useChatWidget** - Convenience wrapper:
+
+```typescript
+function useChatWidget() {
+  const context = useChatWidgetContext();
+  return {
+    ...context,
+    isOpen: context.mode === 'open',
+    toggle: () => context.mode === 'open' ? context.minimize() : context.open(),
+  };
+}
+```
+
+**useTaskSync** - SSE tool_call detection:
+
+```typescript
+const TASK_TOOLS = ['add_task', 'complete_task', 'delete_task', 'update_task'];
+
+function useTaskSync() {
+  const { triggerRefresh } = useTaskContext();
+  
+  const handleToolCall = (event: ToolCallEvent) => {
+    if (TASK_TOOLS.includes(event.tool_name)) {
+      // Debounce 300ms to batch rapid operations
+      setTimeout(triggerRefresh, 300);
     }
   };
+  return { handleToolCall };
+}
+```
 
+**useChatMessages** - Message + SSE management:
+
+```typescript
+function useChatMessages(options: { onToolCall?: (e: ToolCallEvent) => void }) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const sendMessage = async (text: string) => {
+    // POST to backend, parse SSE, call onToolCall
+  };
+  return { messages, sendMessage };
+}
+```
+
+#### Widget Components
+
+**ChatWidgetFAB** - Floating action button:
+
+```tsx
+export function ChatWidgetFAB() {
+  const { isOpen, hasUnreadMessages, open } = useChatWidget();
+  if (isOpen) return null;
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[70%] p-3 rounded-lg ${
-              msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100'
-            }`}>
-              {msg.content}
-            </div>
-          </div>
-        ))}
-        {isLoading && <div className="text-gray-500">Thinking...</div>}
-      </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 p-2 border rounded"
-          />
-          <button type="submit" disabled={isLoading} className="px-4 py-2 bg-blue-500 text-white rounded">
-            Send
-          </button>
-        </div>
-      </form>
-    </div>
+    <button onClick={open} className="fixed bottom-6 right-6 z-[9998]">
+      <ChatIcon />
+      {hasUnreadMessages && <UnreadBadge />}
+    </button>
   );
 }
 ```
 
-### Chat API Client
+**ChatWidget** - Main overlay:
 
-```typescript
-// frontend/lib/api/chat.ts
-import { apiClient } from './client';
+```tsx
+export function ChatWidget() {
+  const { isOpen, close, minimize } = useChatWidget();
+  const { handleToolCall } = useTaskSync();
+  const { messages, sendMessage } = useChatMessages({ onToolCall: handleToolCall });
 
-export interface ChatResponse {
-  success: boolean;
-  message: string;
-  conversation_id: number;
-  tool_calls: string[];
-}
-
-export async function sendChatMessage(userId: string, message: string): Promise<ChatResponse> {
-  const response = await apiClient.post<ChatResponse>(`/api/${userId}/chat`, {
-    message,
-  });
-  return response.data;
+  if (!isOpen) return null;
+  return createPortal(
+    <div role="dialog" className="fixed bottom-20 right-4 w-[380px] h-[500px]">
+      <ChatMessages messages={messages} />
+      <ChatInput onSend={sendMessage} />
+    </div>,
+    document.body
+  );
 }
 ```
 
-### Option B: OpenAI ChatKit Integration
+#### Real-Time Task Sync Flow
 
-If using OpenAI ChatKit for the hackathon requirement:
+```
+User: "Add task buy groceries"
+  ▼
+ChatInput.onSend() → POST /api/{user_id}/chat
+  ▼
+Backend AI calls add_task MCP tool
+  ▼
+SSE Stream sends tool_call event
+  ▼
+useTaskSync.handleToolCall() detects 'add_task'
+  ▼
+TaskContext.triggerRefresh() (debounced)
+  ▼
+GET /api/{user_id}/tasks
+  ▼
+TodoList re-renders with new task (< 2 seconds)
+```
+
+### Option B: Full-Page Chat
 
 ```tsx
-// frontend/components/chat/ChatKitContainer.tsx
-"use client";
-
-import { useEffect, useRef } from 'react';
-import { getApiToken } from '@/lib/api/client';
-
-declare global {
-  interface Window { OpenAIChatKit: any; }
-}
-
-export default function ChatKitContainer({ apiEndpoint }: { apiEndpoint: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://cdn.platform.openai.com/deployments/chatkit/chatkit.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.OpenAIChatKit && containerRef.current) {
-        const chatkit = new window.OpenAIChatKit({
-          element: containerRef.current,
-          apiEndpoint,
-          getSession: async () => {
-            const token = getApiToken();
-            const response = await fetch(`${apiEndpoint}/session`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            return response.json();
-          },
-          theme: 'light',
-          title: "AI Todo Assistant",
-        });
-        chatkit.render();
-      }
-    };
-    document.body.appendChild(script);
-  }, [apiEndpoint]);
-
-  return <div ref={containerRef} className="w-full h-full" />;
+// app/chat/page.tsx
+export default function ChatPage() {
+  return <ChatInterface />;  // Original full-page component
 }
 ```
 
 ---
 
-## Step 5: Gemini API Configuration (Free Tier)
-
-Configure Gemini as an OpenAI-compatible backend for Swarm:
+## Step 5: Gemini API Configuration
 
 ```python
 # backend/src/services/gemini_client.py
 from openai import OpenAI
-from src.config import settings
 
 class GeminiClient:
     def __init__(self):
@@ -379,23 +283,6 @@ class GeminiClient:
             api_key=settings.GEMINI_API_KEY,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
-
-    def get_client(self) -> OpenAI:
-        return self._client
-
-_gemini_client: GeminiClient | None = None
-
-def get_gemini_client() -> GeminiClient:
-    global _gemini_client
-    if _gemini_client is None:
-        _gemini_client = GeminiClient()
-    return _gemini_client
-```
-
-**Environment Variables:**
-```bash
-# backend/.env
-GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ---
@@ -404,75 +291,17 @@ GEMINI_API_KEY=your_gemini_api_key
 
 ### Circuit Breaker
 
-Protect against cascading failures when Gemini API is unavailable:
-
-```python
-# backend/src/middleware/circuit_breaker.py
-import time
-from enum import Enum
-
-class CircuitState(Enum):
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Failing, reject calls
-    HALF_OPEN = "half_open" # Testing recovery
-
-class CircuitBreaker:
-    def __init__(self, failure_threshold=5, recovery_timeout=60):
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.failures = 0
-        self.state = CircuitState.CLOSED
-        self.last_failure_time = None
-
-    def call(self, func):
-        if self.state == CircuitState.OPEN:
-            if time.time() - self.last_failure_time > self.recovery_timeout:
-                self.state = CircuitState.HALF_OPEN
-            else:
-                raise CircuitBreakerError("Circuit breaker is open")
-
-        try:
-            result = func()
-            self._on_success()
-            return result
-        except Exception as e:
-            self._on_failure()
-            raise
-
-    def _on_success(self):
-        self.failures = 0
-        self.state = CircuitState.CLOSED
-
-    def _on_failure(self):
-        self.failures += 1
-        self.last_failure_time = time.time()
-        if self.failures >= self.failure_threshold:
-            self.state = CircuitState.OPEN
-```
+Protect against cascading failures when Gemini API is unavailable.
 
 ### Intent-Based Fallback
 
-When Gemini API fails, detect intent locally and execute tools directly:
+When Gemini fails, detect intent locally:
 
 ```python
 def _detect_intent(self, message: str) -> tuple[str, dict]:
-    """Detect user intent for fallback tool execution."""
     msg_lower = message.lower()
-
-    # List tasks patterns
-    if any(p in msg_lower for p in ["list task", "show task", "my task"]):
-        return ("list_tasks", {"status": "all"})
-
-    # Add task patterns
-    if any(p in msg_lower for p in ["add task", "create task", "new task"]):
-        title = self._extract_title(message)
-        return ("add_task", {"title": title})
-
-    # Complete task patterns
-    if any(p in msg_lower for p in ["complete task", "mark done", "finish task"]):
-        task_id = self._extract_task_id(message)
-        return ("complete_task", {"task_id": task_id})
-
+    if "add task" in msg_lower:
+        return ("add_task", {"title": extract_title(message)})
     return ("unknown", {})
 ```
 
@@ -481,171 +310,56 @@ def _detect_intent(self, message: str) -> tuple[str, dict]:
 ## File Organization
 
 ```
-backend/
-├── src/
-│   ├── main.py                    # FastAPI app, routers
-│   ├── config.py                  # Environment variables
-│   ├── database/
-│   │   ├── connection.py          # Database session
-│   │   └── crud.py                # CRUD operations
-│   ├── models/
-│   │   ├── task.py                # Task model
-│   │   ├── conversation.py        # Conversation model
-│   │   └── message.py             # Message model
-│   ├── services/
-│   │   ├── chat_service.py        # Swarm Agent orchestration
-│   │   ├── gemini_client.py       # Gemini API client
-│   │   └── context_service.py     # Conversation context
-│   ├── mcp/
-│   │   ├── server.py              # FastMCP server
-│   │   └── tools/                 # Individual MCP tools
-│   │       ├── add_task.py
-│   │       ├── list_tasks.py
-│   │       ├── complete_task.py
-│   │       ├── update_task.py
-│   │       └── delete_task.py
-│   ├── middleware/
-│   │   └── circuit_breaker.py     # Resilience patterns
-│   └── api/routes/
-│       ├── chat.py                # Chat endpoint
-│       └── tasks.py               # REST API (optional)
-└── tests/
-    ├── unit/mcp/                  # Tool unit tests
-    └── integration/               # API integration tests
-
 frontend/
 ├── app/
-│   └── chat/page.tsx              # Chat page
+│   ├── dashboard/
+│   │   ├── page.tsx           # ChatWidget + ChatWidgetFAB
+│   │   └── layout.tsx         # TaskProvider + ChatWidgetProvider
+│   └── chat/page.tsx          # Full-page chat (preserved)
 ├── components/chat/
-│   └── ChatInterface.tsx          # Chat UI component
-├── lib/api/
-│   ├── client.ts                  # API client with auth
-│   └── chat.ts                    # Chat API functions
-└── types/chat.ts                  # TypeScript types
-```
-
----
-
-## Testing
-
-### Unit Test for MCP Tool
-
-```python
-# backend/tests/unit/mcp/test_add_task.py
-import pytest
-from src.mcp.tools.add_task import add_task
-
-def test_add_task_success(db_session, test_user_id):
-    result = add_task(
-        user_id=test_user_id,
-        title="Test Task",
-        priority="high",
-        db=db_session,
-    )
-    assert result["success"] is True
-    assert "task_id" in result
-    assert result["message"] == "Task 'Test Task' created successfully!"
-
-def test_add_task_invalid_priority(db_session, test_user_id):
-    result = add_task(
-        user_id=test_user_id,
-        title="Test",
-        priority="invalid",
-        db=db_session,
-    )
-    assert result["success"] is False
-```
-
-### Integration Test for Chat Endpoint
-
-```python
-# backend/tests/integration/test_chat.py
-import pytest
-from fastapi.testclient import TestClient
-
-def test_chat_add_task(client: TestClient, auth_headers: dict):
-    response = client.post(
-        "/api/test-user-id/chat",
-        json={"message": "Add a task to buy groceries"},
-        headers=auth_headers,
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert "groceries" in data["message"].lower() or "created" in data["message"].lower()
+│   ├── ChatWidget.tsx         # Overlay container
+│   ├── ChatWidgetFAB.tsx      # Floating button
+│   ├── ChatMessages.tsx       # Message display
+│   ├── ChatInput.tsx          # Input + send
+│   └── ChatInterface.tsx      # Full-page (original)
+├── contexts/
+│   ├── ChatWidgetContext.tsx  # Widget UI state
+│   └── TaskContext.tsx        # Task CRUD state
+├── hooks/
+│   ├── useChatWidget.ts       # Widget state wrapper
+│   ├── useChatMessages.ts     # Message + SSE
+│   └── useTaskSync.ts         # Task sync
+└── types/
+    ├── chat-widget.ts         # WidgetMode, WidgetState
+    └── task.ts                # Task, TaskCreate
 ```
 
 ---
 
 ## Common Issues
 
-### 1. Gemini 400 Error on Tool Results
+### 1. Task list not updating after AI action
 
-**Problem:** Gemini API rejects tool result format.
+**Cause:** useTaskSync not receiving tool_call events
 
-**Solution:** Use intent-based fallback and capture tool results:
-```python
-# Capture last tool result for fallback
-_last_tool_result: dict | None = None
-
-def add_task_wrapper(...):
-    global _last_tool_result
-    result = add_task(...)
-    _last_tool_result = result  # Capture for fallback
-    return result
-```
-
-### 2. Rate Limiting (429 Errors)
-
-**Problem:** Gemini free tier has rate limits (15 req/min).
-
-**Solution:** Use circuit breaker + local intent detection:
-```python
-if "429" in error_str or "rate" in error_str.lower():
-    intent, params = self._detect_intent(user_message)
-    if intent != "unknown":
-        return self._execute_fallback_tool(intent, params, user_id)
-```
-
-### 3. JWT Token Not Passed to Backend
-
-**Problem:** Chat requests fail with 401.
-
-**Solution:** Ensure API client includes Authorization header:
+**Fix:** Ensure SSE parsing extracts tool_name:
 ```typescript
-// lib/api/client.ts
-const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-});
-
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+if (event.type === 'tool_call') {
+  onToolCall?.({ tool_name: event.tool_name, ... });
+}
 ```
 
----
+### 2. Widget state lost on refresh
 
-## Resources
+**Cause:** localStorage not persisting
 
-This skill bundles the following resources:
+**Fix:** Check ChatWidgetContext persists to `'chat-widget-state'`
 
-### references/
-- `mcp_spec.md` - Model Context Protocol specification overview
-- `openai_agents_sdk.md` - OpenAI Agents SDK (Swarm) documentation
-- `chatkit_config.md` - OpenAI ChatKit configuration guide
-- `api_reference.md` - Chat API contracts and schemas
+### 3. Unread badge not showing
 
-### assets/
-- `fastapi_mcp_template/` - Complete FastAPI MCP server boilerplate
-- `nextjs_chatkit_template/` - Next.js frontend with ChatKit integration
+**Cause:** onNewMessage callback not called
 
-### scripts/
-- `create_mcp_tool.py` - Scaffold new MCP tools
-- `generate_chat_endpoint.py` - Generate FastAPI chat endpoint
+**Fix:** Call `setHasUnreadMessages(true)` when widget is minimized and new message arrives
 
 ---
 
@@ -656,5 +370,7 @@ This skill bundles the following resources:
 - [ ] JWT authentication validates user on every request
 - [ ] Tools execute with correct user_id isolation
 - [ ] Fallback works when Gemini API fails
-- [ ] Frontend sends messages and displays responses
-- [ ] Conversation context maintained across messages
+- [ ] Chat widget opens/closes/minimizes correctly
+- [ ] Task list updates within 2 seconds of AI tool execution
+- [ ] Widget state persists across page refreshes
+- [ ] Unread badge shows when minimized and new messages arrive
