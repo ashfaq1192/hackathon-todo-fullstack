@@ -90,6 +90,7 @@ test-results/
 .env.development.local
 .env.test.local
 .env.production.local
+.env
 
 # Debugging and temporary files (root only)
 /test_*.py
