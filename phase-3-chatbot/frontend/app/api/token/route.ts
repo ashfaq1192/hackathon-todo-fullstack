@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from "../../../lib/auth/auth";
+import { auth } from "@/lib/auth/auth";
 import * as jose from 'jose';
 
 export async function GET(request: NextRequest) {
