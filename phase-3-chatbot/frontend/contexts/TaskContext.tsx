@@ -8,7 +8,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { apiClient, getUserId } from '../lib/api/client';
+import { apiClient, getUserId } from '@/lib/api/client';
 import type { Task, TaskCreate, TaskPatch } from '../types/task';
 
 /** Context value for TaskContext */
