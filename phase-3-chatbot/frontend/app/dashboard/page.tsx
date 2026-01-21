@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { initializeApiToken, getUserId } from '@/lib/api/client';
@@ -35,43 +35,66 @@ function DashboardContent() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const { fetchTasks, isLoading, error } = useTaskContext();
+  const hasInitialized = useRef(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Ensure consistent render between server and client to prevent hydration mismatch
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Initialize API token and fetch todos on mount
   useEffect(() => {
     const initializeSessionAndTasks = async () => {
-      if (!session) return;
+      if (!session || hasInitialized.current) return;
+      hasInitialized.current = true;
+
+      console.log('[Dashboard] Initializing session and tasks...');
 
       try {
         let currentUserId = getUserId();
+        console.log('[Dashboard] Current userId from localStorage:', currentUserId);
+
         if (!currentUserId) {
+          console.log('[Dashboard] No userId, fetching token...');
           const tokenData = await initializeApiToken();
+          console.log('[Dashboard] Token data received:', tokenData);
+
           if (tokenData && tokenData.user_id) {
             currentUserId = tokenData.user_id;
           } else {
             throw new Error('Failed to get user ID after token initialization.');
           }
         }
+
+        console.log('[Dashboard] Fetching tasks for userId:', currentUserId);
         await fetchTasks();
+        console.log('[Dashboard] Tasks fetched successfully');
       } catch (err) {
-        console.error('Initialization error:', err);
+        console.error('[Dashboard] Initialization error:', err);
+        hasInitialized.current = false; // Allow retry on error
         if (err instanceof Error && err.message === 'Unauthorized') {
           router.push('/login');
         }
       }
     };
 
-    if (session && !isLoading) {
+    if (session) {
       initializeSessionAndTasks();
     } else if (!isPending && !session) {
       router.push('/login');
     }
-  }, [session, isPending, fetchTasks, isLoading, router]);
+  }, [session, isPending, fetchTasks, router]);
 
-  // Loading state
-  if (isPending || !session) {
+  // Loading state - show on server, before mount, and while session is pending
+  // This prevents hydration mismatch by ensuring identical server/client initial render
+  if (!hasMounted || isPending || !session) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-32">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }

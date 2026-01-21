@@ -5,6 +5,8 @@
  * Includes navigation, authentication guard, and chat widget provider.
  */
 
+'use client';
+
 import { Navigation } from '@/components/layout/Navigation';
 import { ChatWidgetProvider } from '@/contexts/ChatWidgetContext';
 

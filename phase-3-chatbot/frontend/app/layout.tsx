@@ -1,13 +1,19 @@
 // Root layout
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/ToastProvider'; // Import ToastProvider
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1.0,
+  maximumScale: 1.0,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: 'Todo App - Hackathon II',
   description: 'Full-stack todo application with Next.js and FastAPI',
-  viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
 };
 
 export default function RootLayout({

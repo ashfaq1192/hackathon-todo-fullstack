@@ -112,6 +112,7 @@ export function AddTodoForm({}: AddTodoFormProps) {
         </label>
         <select
           id="priority"
+          defaultValue="medium"
           {...register('priority')}
           disabled={isLoading}
           className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
@@ -119,7 +120,7 @@ export function AddTodoForm({}: AddTodoFormProps) {
           } ${isLoading ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
         >
           <option value="low">🟢 Low Priority</option>
-          <option value="medium" selected>🟡 Medium Priority</option>
+          <option value="medium">🟡 Medium Priority</option>
           <option value="high">🔴 High Priority</option>
         </select>
         {errors.priority && (

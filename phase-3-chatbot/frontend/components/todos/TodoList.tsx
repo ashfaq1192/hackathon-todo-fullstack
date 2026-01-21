@@ -22,6 +22,9 @@ export function TodoList({}: TodoListProps) {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Create todos alias for tasks
+  const todos = tasks || [];
+
   // Filter todos based on selected filter, priority filter, and search query
   const filteredTodos = todos.filter((todo) => {
     // Filter by status
@@ -250,8 +253,8 @@ export function TodoList({}: TodoListProps) {
               key={todo.id}
               todo={todo}
               taskNumber={todo.id}  // Use actual database ID for consistency with chatbot
-              onUpdate={onUpdate}
-              onDelete={onDelete}
+              onUpdate={updateTask}
+              onDelete={deleteTask}
             />
           ))}
         </div>

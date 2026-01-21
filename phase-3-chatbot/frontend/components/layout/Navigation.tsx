@@ -5,12 +5,18 @@ import { authClient } from '@/lib/auth/client';
 import { clearApiToken } from '@/lib/api/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import React, { useState } from 'react'; // Import useState
+import React, { useState, useEffect } from 'react';
 
 export function Navigation() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Ensure consistent render between server and client to prevent hydration mismatch
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -22,12 +28,18 @@ export function Navigation() {
     }
   };
 
-  if (isPending) {
+  // Show loading skeleton on server and until mounted on client
+  // This prevents hydration mismatch by ensuring identical server/client initial render
+  if (!hasMounted || isPending) {
     return (
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-white/20 rounded animate-pulse"></div>
+              <div className="h-6 w-32 bg-white/20 animate-pulse rounded"></div>
+            </div>
+            <div className="h-8 w-20 bg-white/20 animate-pulse rounded"></div>
           </div>
         </div>
       </nav>

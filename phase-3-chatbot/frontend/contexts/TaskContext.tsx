@@ -41,7 +41,10 @@ export function TaskProvider({ children }: TaskProviderProps) {
 
   const fetchTasks = useCallback(async () => {
     const userId = getUserId();
+    console.log('[TaskContext] fetchTasks called, userId:', userId);
+
     if (!userId) {
+      console.log('[TaskContext] No userId, setting error');
       setError('User not authenticated');
       setIsLoading(false);
       return;
@@ -51,12 +54,14 @@ export function TaskProvider({ children }: TaskProviderProps) {
     setError(null);
 
     try {
+      console.log('[TaskContext] Calling API to get tasks for:', userId);
       const response = await apiClient.getTasks(userId);
+      console.log('[TaskContext] Tasks received:', response);
       setTasks(response.tasks);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch tasks';
       setError(message);
-      console.error('Failed to fetch tasks:', err);
+      console.error('[TaskContext] Failed to fetch tasks:', err);
     } finally {
       setIsLoading(false);
     }
