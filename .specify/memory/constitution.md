@@ -2,55 +2,51 @@
 
 <!--
 Sync Impact Report:
-Version: 1.4.0 → 1.5.0 (MINOR: Phase III Chatbot Specifications)
+Version: 1.5.0 → 1.6.0 (MINOR: Phase IV Local Kubernetes Deployment Specifications)
 
 Changes:
-- Expanded Phase III section with focused technical specifications
-- Added MCP (Model Context Protocol) architecture details
-- Specified OpenAI Agents SDK integration requirements
-- Defined stateless chat endpoint architecture
-- Added database models for conversations and messages
-- Specified 5 MCP tools with signatures
-- Added natural language interaction examples
-- Defined OpenAI ChatKit setup requirements
-- Added Phase III Definition of Done
-- Specified deliverables and branch naming
+- Expanded Phase IV section with comprehensive technical specifications
+- Added AIOps tools specifications (Docker AI Gordon, kubectl-ai, Kagent)
+- Defined technology stack for containerization and orchestration
+- Specified Docker, Minikube, Helm Charts requirements
+- Added 4-stage gradual implementation strategy
+- Defined project structure for Phase IV artifacts
+- Added Definition of Done (MVP and Production-Ready)
+- Specified deliverables and branch naming sequence
 
 New Sections Added:
-1. Phase III: AI-Powered Todo Chatbot including:
-   - Core Architecture (stateless endpoint + MCP tools)
-   - Technology Stack (ChatKit, Agents SDK, MCP SDK)
-   - Database Models (Conversation, Message)
-   - MCP Tools Specification (5 tools)
-   - Natural Language Examples
-   - Stateless Request Cycle (9 steps)
-   - OpenAI ChatKit Setup
-   - Definition of Done
-   - Deliverables
-   - Constitution Compliance
+1. Phase IV: Local Kubernetes Deployment including:
+   - Core Architecture (Docker + Minikube + Helm)
+   - Technology Stack (Docker Desktop, Minikube, Helm, AIOps tools)
+   - AIOps Tools Specification (Gordon, kubectl-ai, Kagent)
+   - Requirements for containerization and deployment
+   - 4-stage Gradual Implementation Strategy
+   - Project Structure for Phase IV
+   - Definition of Done (MVP and Production-Ready)
+   - Deliverables and Constitution Compliance
 
 Modified Sections:
-- Phase III: Expanded from 11 lines to ~80 lines with production-ready specifications
+- Phase IV: Expanded from 10 lines to ~150 lines with production-ready specifications
 - Maintained conciseness while covering all hackathon requirements
 
 Templates Requiring Updates:
-✅ spec-template.md - supports AI/chatbot features
-✅ plan-template.md - supports MCP architecture
-✅ tasks-template.md - supports gradual chatbot implementation
-⚠️ Need to add MCP server documentation when implementing Phase III
+✅ Existing templates support Phase IV features
+⚠️ May need Kubernetes/Helm specific templates for infrastructure specs
 
 Rationale for MINOR version bump:
-- Significant Phase III material added (from brief outline to actionable spec)
-- Non-breaking: Phase I and II remain unchanged, Phase III is additive
-- Enables Phase III execution with clear requirements
-- Aligns with hackathon PDF requirements
+- Significant Phase IV material added (from brief outline to actionable spec)
+- Non-breaking: Phase I, II, and III remain unchanged, Phase IV is additive
+- Enables Phase IV execution with clear requirements
+- Aligns with hackathon PDF requirements for Local Kubernetes Deployment
+- Incorporates latest AIOps tools (Gordon, kubectl-ai, Kagent) from web research
 
 Follow-up TODOs:
-- Create /specs/features/007-chatbot-mcp/ when starting Phase III
-- Set up OpenAI API key for Agents SDK
-- Configure NEXT_PUBLIC_OPENAI_DOMAIN_KEY for ChatKit
-- Add domain to OpenAI platform allowlist
-- Create database migrations for conversations and messages tables
+- Install Docker Desktop 4.53+ and enable Gordon
+- Install kubectl-ai via krew: `kubectl krew install ai`
+- Install Kagent for advanced Kubernetes AI operations
+- Set up Minikube with required addons
+- Create /specs/features/008-local-k8s-deployment/ when starting Phase IV
+- Configure environment variables for Kubernetes deployment
 </thinking>
 -->
 
@@ -589,14 +585,179 @@ class Task(SQLModel, table=True):
 
 ### Phase IV: Local Kubernetes Deployment
 
-**Scope**: Containerize with Docker, deploy to Minikube with multi-pod architecture, add Kafka for event streaming.
+**Scope**: Deploy the Phase III Todo Chatbot on a local Kubernetes cluster using Minikube, Helm Charts, and AI-assisted DevOps tools. Containerize both frontend and backend applications. Features MUST be implemented gradually following the SDD workflow.
 
-**Technology**: Docker, Minikube, Kafka, Dapr (sidecar pattern).
+**Objective**: Demonstrate cloud-native deployment skills by containerizing the chatbot application, creating Helm charts, and deploying to a local Kubernetes cluster with AI-assisted tooling.
+
+**Core Architecture**: Docker containers + Kubernetes (Minikube) + Helm Charts + AI DevOps tools
+- Frontend: Next.js application containerized and deployed as Kubernetes Deployment/Service
+- Backend: FastAPI + MCP server containerized and deployed as Kubernetes Deployment/Service
+- Database: Neon PostgreSQL (external, cloud-hosted - no change from Phase III)
+- Container Registry: Local Minikube registry or Docker Hub
+
+**Technology Stack**:
+- **Containerization**: Docker (Docker Desktop)
+- **Docker AI**: Docker AI Agent (Gordon) - requires Docker Desktop 4.53+
+- **Orchestration**: Kubernetes (Minikube)
+- **Package Manager**: Helm Charts
+- **AI DevOps**: kubectl-ai (Google Cloud Platform), Kagent (CNCF sandbox project)
+- **Application**: Phase III Todo Chatbot (frontend + backend)
+
+**AIOps Tools Specification**:
+
+**Docker AI Agent (Gordon)**:
+- Embedded AI assistant in Docker Desktop and CLI
+- Enable in Docker Desktop 4.53+: Settings > Beta features > toggle on
+- Commands: `docker ai "What can you do?"`, `docker ai "containerize this app"`
+- Uses LLMs to generate Dockerfiles, troubleshoot container issues, manage resources
+- Supports MCP integration for connecting to external tools
+- Note: If Gordon is unavailable in your region, use standard Docker CLI or ask Claude Code to generate docker commands
+
+**kubectl-ai** (Google Cloud Platform):
+- Natural language interface to Kubernetes
+- Install via krew: `kubectl krew install ai`, then use as `kubectl ai`
+- Supports multiple LLMs: Gemini, OpenAI, Grok, local models via Ollama
+- Read-only by default, requests permission before modifying resources
+- Example: `kubectl ai "deploy the todo frontend with 2 replicas"`
+- Example: `kubectl ai "scale the backend to handle more load"`
+- Example: `kubectl ai "check why the pods are failing"`
+
+**Kagent** (CNCF Sandbox Project):
+- Open-source framework for AI agents in Kubernetes
+- Built on A2A protocol, Agent Development Kit (ADK), and MCP
+- Provides MCP server with tools for K8s, Helm, Prometheus, Grafana
+- Supports multiple LLM providers: OpenAI, Anthropic, Azure, Ollama
+- Agents are Kubernetes custom resources
+- Example: `kagent "analyze the cluster health"`
+- Example: `kagent "optimize resource allocation"`
+
+**Requirements**:
+- Containerize frontend and backend applications using Docker/Gordon
+- Create multi-stage Dockerfiles for optimized image sizes
+- Create Helm charts for deployment (use kubectl-ai and/or kagent to generate)
+- Deploy to Minikube locally with proper resource limits
+- Configure environment variables via Kubernetes Secrets/ConfigMaps
+- Implement health checks (liveness/readiness probes)
+- Set up Kubernetes Services for internal communication
+
+**Gradual Implementation Strategy**:
+
+**Stage 1: Docker Containerization** (Branch: `008-docker-containerization`)
+- Create Dockerfile for backend (FastAPI + MCP server)
+- Create Dockerfile for frontend (Next.js)
+- Use multi-stage builds for optimized images
+- Test containers locally with docker-compose
+- Use Gordon for AI-assisted Dockerfile generation and troubleshooting
+- **Acceptance**: Both containers run locally and communicate successfully
+
+**Stage 2: Minikube Setup** (Branch: `009-minikube-setup`)
+- Install and configure Minikube locally
+- Enable required addons (ingress, registry, metrics-server)
+- Configure kubectl context for Minikube
+- Verify cluster health with kubectl-ai
+- **Acceptance**: Minikube cluster running with addons enabled
+
+**Stage 3: Helm Charts Creation** (Branch: `010-helm-charts`)
+- Create Helm chart structure for todo-chatbot
+- Define templates for Deployments, Services, ConfigMaps, Secrets
+- Use kubectl-ai/kagent to assist with manifest generation
+- Configure values.yaml for environment-specific settings
+- Implement Ingress for external access
+- **Acceptance**: `helm lint` passes, charts are well-structured
+
+**Stage 4: Local Deployment** (Branch: `011-local-k8s-deploy`)
+- Deploy Helm charts to Minikube
+- Verify all pods are running and healthy
+- Test application functionality through Ingress
+- Configure horizontal pod autoscaling (optional)
+- Document deployment process in README
+- **Acceptance**: Application fully functional on Minikube
+
+**Project Structure for Phase IV**:
+```text
+/
+├── phase-4-k8s/
+│   ├── docker/
+│   │   ├── backend/
+│   │   │   └── Dockerfile
+│   │   └── frontend/
+│   │       └── Dockerfile
+│   ├── helm/
+│   │   └── todo-chatbot/
+│   │       ├── Chart.yaml
+│   │       ├── values.yaml
+│   │       ├── values-minikube.yaml
+│   │       └── templates/
+│   │           ├── backend-deployment.yaml
+│   │           ├── backend-service.yaml
+│   │           ├── frontend-deployment.yaml
+│   │           ├── frontend-service.yaml
+│   │           ├── configmap.yaml
+│   │           ├── secrets.yaml
+│   │           └── ingress.yaml
+│   ├── scripts/
+│   │   ├── build-images.sh
+│   │   ├── deploy-minikube.sh
+│   │   └── cleanup.sh
+│   └── CLAUDE.md
+├── specs/
+│   └── features/
+│       └── 008-local-k8s-deployment/
+│           ├── spec.md
+│           ├── plan.md
+│           └── tasks.md
+└── README.md (updated with Phase IV instructions)
+```
+
+**Definition of Done (MVP)**:
+- ✅ Backend Dockerfile created and builds successfully
+- ✅ Frontend Dockerfile created and builds successfully
+- ✅ Docker images optimized with multi-stage builds (<500MB each)
+- ✅ docker-compose.yml for local testing works
+- ✅ Minikube cluster running with required addons
+- ✅ Helm chart created with proper structure
+- ✅ All Kubernetes manifests valid (`kubectl apply --dry-run=client`)
+- ✅ Application deployed to Minikube and accessible
+- ✅ Health checks (liveness/readiness probes) implemented
+- ✅ Environment variables properly configured via ConfigMaps/Secrets
+- ✅ AI tools (Gordon, kubectl-ai, or kagent) used and documented
+- ✅ README with local Minikube deployment instructions
+- ✅ Demo showing: container builds, Minikube deployment, app functionality
+
+**Definition of Done (Production-Ready)**:
+- All MVP criteria PLUS:
+- ✅ Horizontal Pod Autoscaler configured
+- ✅ Resource limits and requests defined for all containers
+- ✅ Network policies for pod-to-pod communication
+- ✅ Persistent volume claims for any stateful data
+- ✅ Helm chart passes `helm lint` with no warnings
+- ✅ Rollback strategy documented and tested
+- ✅ Monitoring with Prometheus metrics endpoint
+- ✅ Logging aggregation configured
+
+**Branch Sequence**: `008-docker-containerization` → `009-minikube-setup` → `010-helm-charts` → `011-local-k8s-deploy`
+
+**Deliverables**:
+- GitHub repository with Phase IV implementation
+- Dockerfiles for frontend and backend
+- Helm charts in `/phase-4-k8s/helm/`
+- Deployment scripts for Minikube
+- CLAUDE.md documenting AI tool usage (Gordon, kubectl-ai, kagent)
+- README with comprehensive local deployment instructions
+- Demo video (<90 seconds) showing:
+  1. Docker image builds
+  2. Minikube cluster setup
+  3. Helm deployment process
+  4. Application running on Kubernetes
+  5. AI tool usage (at least one: Gordon, kubectl-ai, or kagent)
 
 **Constitution Compliance**:
 - Cloud-Native Blueprints (+200 bonus, Principle VI)
 - Demonstrate scalability (Principle VII)
 - Document infrastructure as code in `/specs/infrastructure/`
+- Follow SDD workflow: spec → plan → tasks → implement (Principle II)
+- Use AI-assisted tools for DevOps automation
+- No manual Kubernetes manifest writing without AI assistance
 
 ### Phase V: Advanced Cloud & Orchestration
 
@@ -621,4 +782,4 @@ All pull requests and reviews MUST verify compliance with this constitution. Com
 
 Use `CLAUDE.md` for runtime development guidance and session tracking.
 
-**Version**: 1.5.0 | **Ratified**: 2025-12-17 | **Last Amended**: 2026-01-03
+**Version**: 1.6.0 | **Ratified**: 2025-12-17 | **Last Amended**: 2026-01-22
