@@ -1,43 +1,103 @@
 # Minikube-specific values for todo-chatbot
 # Override default values for local development
+#
+# Usage:
+#   helm install todo-chatbot ./helm/todo-chatbot -f ./helm/todo-chatbot/values-minikube.yaml
+#
+# IMPORTANT: Before deploying, update the secret values below with your actual credentials
+# You can also use --set to override at install time:
+#   helm install todo-chatbot ./helm/todo-chatbot \
+#     -f ./helm/todo-chatbot/values-minikube.yaml \
+#     --set backend.env.DATABASE_URL="postgresql://..." \
+#     --set backend.env.OPENAI_API_KEY="sk-..."
 
+# Backend configuration
 backend:
   replicaCount: 1
   image:
     repository: todo-backend
-    tag: latest
-    pullPolicy: Never  # Use local images
+    tag: v1
+    pullPolicy: Never  # Use local images loaded via minikube image load
   resources:
     limits:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 100m
+      memory: 256Mi
+  # Environment variables - UPDATE THESE WITH YOUR VALUES
+  env:
+    # Neon PostgreSQL connection string
+    DATABASE_URL: "postgresql://neondb_owner:npg_23SEMhDfZIKA@ep-holy-flower-a8a79bvt-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
+    # Gemini API Key (Phase III chatbot uses Gemini, not OpenAI)
+    GEMINI_API_KEY: "AIzaSyDrW3nhjEN2BAXPPm_7snfgTI34sxBLgmM"
+    # Better Auth secret
+    BETTER_AUTH_SECRET: "m0BJvpuui4TL6kBTmzOhDxxTAh05WbuE5bM9Up4lBUk="
+    # JWT Secret Key
+    JWT_SECRET_KEY: "2c11009a771bb61286928624339bf8535e33b75dc0b7838dd6effa420a5fce8a"
+    # Logging level
+    LOG_LEVEL: "DEBUG"
+    # Frontend URL for CORS
+    FRONTEND_URL: "http://todo.local"
 
+# Frontend configuration
 frontend:
   replicaCount: 1
   image:
     repository: todo-frontend
-    tag: latest
+    tag: v1
     pullPolicy: Never  # Use local images
   resources:
     limits:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 100m
+      memory: 256Mi
+  # Environment variables
+  env:
+    # Backend API URL (external URL for client-side)
+    NEXT_PUBLIC_BACKEND_URL: "http://todo.local/api"
+    # Better Auth URL
+    NEXT_PUBLIC_BETTER_AUTH_URL: "http://todo.local"
+    # Internal backend URL for server-side requests
+    BACKEND_URL: "http://todo-chatbot-backend:8000"
+    # Better Auth secret (must match backend)
+    BETTER_AUTH_SECRET: "m0BJvpuui4TL6kBTmzOhDxxTAh05WbuE5bM9Up4lBUk="
+    # Database URL for Better Auth SSR
+    DATABASE_URL: "postgresql://neondb_owner:npg_23SEMhDfZIKA@ep-holy-flower-a8a79bvt-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
 
+# Ingress configuration for Minikube
 ingress:
   enabled: true
   className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
   hosts:
     - host: todo.local
       paths:
-        - path: /
-          pathType: Prefix
-          service: frontend
+        # API routes go to backend
         - path: /api
           pathType: Prefix
           service: backend
+        # Health check endpoint
+        - path: /health
+          pathType: Exact
+          service: backend
+        # All other routes go to frontend
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+# ConfigMap data
+configMap:
+  create: true
+  data:
+    LOG_LEVEL: "DEBUG"
+    FRONTEND_URL: "http://todo.local"
+
+# Secrets
+secrets:
+  create: true

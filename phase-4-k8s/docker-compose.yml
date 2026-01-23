@@ -1,0 +1,78 @@
+# Docker Compose for local testing of Todo Chatbot containers
+# Usage: docker-compose up -d
+#
+# This file is for LOCAL TESTING ONLY before deploying to Kubernetes.
+# For production deployment, use Helm charts in ./helm/todo-chatbot/
+
+version: '3.8'
+
+services:
+  # Backend API (FastAPI + MCP)
+  backend:
+    image: todo-backend:latest
+    container_name: todo-backend
+    build:
+      context: ../phase-3-chatbot/backend
+      dockerfile: ${PWD}/docker/backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Database (Neon PostgreSQL)
+      - DATABASE_URL=${DATABASE_URL}
+      # OpenAI API
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Authentication
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Frontend URL for CORS
+      - FRONTEND_URL=http://localhost:3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - todo-network
+
+  # Frontend (Next.js)
+  frontend:
+    image: todo-frontend:latest
+    container_name: todo-frontend
+    build:
+      context: ../phase-3-chatbot/frontend
+      dockerfile: ${PWD}/docker/frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Backend API URL
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      # For SSR requests
+      - BACKEND_URL=http://backend:8000
+      # Authentication
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      # Database (for Better Auth)
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    driver: bridge
+    name: todo-chatbot-network
+
+# Volume for any persistent data (not used currently - external DB)
+volumes:
+  app-data:

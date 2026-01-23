@@ -1,66 +1,122 @@
 # Default values for todo-chatbot
 # This is a YAML-formatted file.
+# Override with values-minikube.yaml for local deployment
 
-# Backend configuration
+# Global settings
+global:
+  imagePullPolicy: Never  # Use local images loaded via minikube image load
+
+# Backend configuration (FastAPI + MCP)
 backend:
   replicaCount: 1
   image:
     repository: todo-backend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never  # Local images
   service:
     type: ClusterIP
     port: 8000
+    targetPort: 8000
   resources:
     limits:
       cpu: 500m
       memory: 512Mi
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
+  # Environment variables (secrets set via secrets.yaml or values-minikube.yaml)
   env:
     DATABASE_URL: ""
-    OPENAI_API_KEY: ""
+    GEMINI_API_KEY: ""
     BETTER_AUTH_SECRET: ""
+    JWT_SECRET_KEY: ""
+    LOG_LEVEL: "INFO"
+  # Health probes
+  probes:
+    liveness:
+      enabled: true
+      path: /health
+      port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      path: /health
+      port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
 
-# Frontend configuration
+# Frontend configuration (Next.js)
 frontend:
   replicaCount: 1
   image:
     repository: todo-frontend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Never  # Local images
   service:
     type: ClusterIP
     port: 3000
+    targetPort: 3000
   resources:
     limits:
       cpu: 500m
       memory: 512Mi
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
+  # Environment variables
   env:
-    NEXT_PUBLIC_API_URL: ""
+    NEXT_PUBLIC_BACKEND_URL: ""  # Set via configmap or values-minikube.yaml
+    BETTER_AUTH_SECRET: ""
+    DATABASE_URL: ""  # For Better Auth SSR
+  # Health probes
+  probes:
+    liveness:
+      enabled: true
+      path: /
+      port: 3000
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      path: /
+      port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
 
 # Ingress configuration
 ingress:
   enabled: true
   className: nginx
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
   hosts:
     - host: todo.local
       paths:
-        - path: /
-          pathType: Prefix
-          service: frontend
         - path: /api
           pathType: Prefix
           service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
 
-# ConfigMap and Secrets
+# ConfigMap settings
 configMap:
   create: true
+  data:
+    LOG_LEVEL: "INFO"
+    FRONTEND_URL: "http://todo.local"
 
+# Secrets settings
 secrets:
   create: true
+  # Values should be set in values-minikube.yaml or via --set
