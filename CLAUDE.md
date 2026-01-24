@@ -11,5 +11,11 @@ Phase IV - Local Kubernetes Deployment
 - Dockerfile (multi-stage), YAML (Kubernetes manifests), Bash (scripts) + Docker Desktop 4.53+, Minikube, Helm 3.x, kubectl (008-local-k8s-deployment)
 - External Neon PostgreSQL (no local storage required) (008-local-k8s-deployment)
 
+## Meta Skills (Never Modify)
+The following skills are meta skills and must NEVER be changed/updated:
+- skill-creator
+- skill-creator-pro
+- skill-validator
+
 ## Recent Changes
 - 008-local-k8s-deployment: Added Dockerfile (multi-stage), YAML (Kubernetes manifests), Bash (scripts) + Docker Desktop 4.53+, Minikube, Helm 3.x, kubectl
