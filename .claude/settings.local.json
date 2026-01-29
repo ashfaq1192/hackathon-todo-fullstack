@@ -52,7 +52,13 @@
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
       "Bash(oci --version:*)",
       "Bash(dapr version:*)",
-      "Bash(docker buildx:*)"
+      "Bash(docker buildx:*)",
+      "Bash(docker pull:*)",
+      "Bash(ping:*)",
+      "Bash(nslookup:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth:*)",
+      "Bash(git config:*)"
     ]
   }
 }
