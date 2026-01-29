@@ -2,52 +2,67 @@
 
 <!--
 Sync Impact Report:
-Version: 1.5.0 → 1.6.0 (MINOR: Phase IV Local Kubernetes Deployment Specifications)
+Version: 1.6.0 → 1.7.0 (MINOR: Phase V Advanced Cloud Deployment Specifications)
 
 Changes:
-- Expanded Phase IV section with comprehensive technical specifications
-- Added AIOps tools specifications (Docker AI Gordon, kubectl-ai, Kagent)
-- Defined technology stack for containerization and orchestration
-- Specified Docker, Minikube, Helm Charts requirements
-- Added 4-stage gradual implementation strategy
-- Defined project structure for Phase IV artifacts
-- Added Definition of Done (MVP and Production-Ready)
-- Specified deliverables and branch naming sequence
+- Expanded Phase V section with production-ready cloud deployment patterns
+- Added OIDC Workload Identity for secure CI/CD authentication
+- Specified OpenTelemetry + Grafana Cloud observability stack
+- Added Dapr HA configuration requirements
+- Specified Redpanda Cloud for Kafka-compatible messaging (14-day $100 credit trial)
+- Added External Secrets Operator (ESO) for advanced secret management
+- Added GitOps deployment pattern with Argo CD/Flux CD (optional but recommended)
+- Defined 5-stage gradual implementation strategy with clear checkpoints
+- Updated Definition of Done with comprehensive observability and security requirements
+- Added advanced features: recurring tasks, due dates, reminders, priorities, tags, search, filter, sort
+- Included production best practices checklist
 
-New Sections Added:
-1. Phase IV: Local Kubernetes Deployment including:
-   - Core Architecture (Docker + Minikube + Helm)
-   - Technology Stack (Docker Desktop, Minikube, Helm, AIOps tools)
-   - AIOps Tools Specification (Gordon, kubectl-ai, Kagent)
-   - Requirements for containerization and deployment
-   - 4-stage Gradual Implementation Strategy
-   - Project Structure for Phase IV
-   - Definition of Done (MVP and Production-Ready)
-   - Deliverables and Constitution Compliance
+New Sections Added/Enhanced:
+1. Phase V: Advanced Cloud Deployment including:
+   - Oracle Kubernetes Engine (OKE) Always Free tier deployment (4 vCPUs, 24GB RAM perpetual)
+   - Dapr HA integration (Pub/Sub, State Management, Bindings, Secrets, Service Invocation)
+   - Event-driven architecture with Kafka/Redpanda
+   - OIDC-based CI/CD pipeline with GitHub Actions (eliminates static credentials)
+   - Zero-code observability with OpenTelemetry + Grafana Cloud Free Tier
+   - Advanced application features implementation
+   - 5-stage implementation strategy (OKE setup → Kafka → Dapr → CI/CD → Observability)
+   - GitOps deployment as production enhancement (optional)
+   - Comprehensive security practices (RBAC, Network Policies, ESO)
+   - Infrastructure as Code with Terraform (optional)
 
 Modified Sections:
-- Phase IV: Expanded from 10 lines to ~150 lines with production-ready specifications
-- Maintained conciseness while covering all hackathon requirements
+- Phase V: Expanded from basic outline to comprehensive production-ready specifications (~150 lines)
+- Added modern cloud-native best practices (OIDC, OpenTelemetry, GitOps)
+- Enhanced security requirements with ESO and network policies
+- Updated deliverables to include observability dashboards and security scanning
 
 Templates Requiring Updates:
-✅ Existing templates support Phase IV features
-⚠️ May need Kubernetes/Helm specific templates for infrastructure specs
+✅ Existing templates support Phase V features
+⚠️ May need cloud infrastructure templates (Terraform for OKE provisioning)
+⚠️ CI/CD workflow templates for OIDC authentication
+⚠️ Dapr component YAML templates
+⚠️ OpenTelemetry Collector configuration templates
 
 Rationale for MINOR version bump:
-- Significant Phase IV material added (from brief outline to actionable spec)
-- Non-breaking: Phase I, II, and III remain unchanged, Phase IV is additive
-- Enables Phase IV execution with clear requirements
-- Aligns with hackathon PDF requirements for Local Kubernetes Deployment
-- Incorporates latest AIOps tools (Gordon, kubectl-ai, Kagent) from web research
+- Significant Phase V material added (from outline to production-ready actionable spec)
+- Non-breaking: Phases I-IV remain unchanged, Phase V is additive
+- Enables Phase V execution with complete modern cloud-native requirements
+- Incorporates latest 2026 best practices (OIDC, OpenTelemetry, GitOps)
+- Aligns with hackathon PDF requirements for Advanced Cloud Deployment
+- Based on combined research (Claude + Gemini) validated against industry standards
+- Provides first-time cloud deployment guidance with free-tier platform focus
 
 Follow-up TODOs:
-- Install Docker Desktop 4.53+ and enable Gordon
-- Install kubectl-ai via krew: `kubectl krew install ai`
-- Install Kagent for advanced Kubernetes AI operations
-- Set up Minikube with required addons
-- Create /specs/features/008-local-k8s-deployment/ when starting Phase IV
-- Configure environment variables for Kubernetes deployment
-</thinking>
+- Set up Oracle Cloud account and enable "Pay As You Go" (keeps Always Free resources)
+- Install OCI CLI: `bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"`
+- Sign up for Redpanda Cloud free trial ($100 credits, 14 days)
+- Configure GitHub repository secrets for OIDC workload identity
+- Set up Grafana Cloud free tier account (10k metrics, 50GB logs, 50GB traces)
+- Install Dapr CLI: `curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash`
+- Create /specs/features/012-advanced-cloud-deployment/ when starting Phase V
+- Review IMPLEMENTATION_GUIDE.md in phase-5-cloud-deployment/ directory for detailed guidance
+- Install kubectl-ai if not already available: `kubectl krew install ai`
+-->
 -->
 
 ## Overview
@@ -759,16 +774,218 @@ class Task(SQLModel, table=True):
 - Use AI-assisted tools for DevOps automation
 - No manual Kubernetes manifest writing without AI assistance
 
-### Phase V: Advanced Cloud & Orchestration
+### Phase V: Advanced Cloud Deployment
 
-**Scope**: Kubernetes orchestration, Dapr integration, advanced AI features, comprehensive observability.
+**Scope**: Deploy the Dapr-enabled Todo Chatbot to a production-grade Kubernetes cluster (OKE Always Free), integrate with a managed Kafka-compatible service (Redpanda Cloud), set up robust CI/CD with GitHub Actions and OIDC, and implement comprehensive observability using Grafana Cloud and OpenTelemetry. This phase includes implementing advanced features like recurring tasks and reminders using Dapr.
 
-**Technology**: Kubernetes, Dapr, Prometheus, Grafana, OpenTelemetry.
+**Objective**: Master advanced cloud-native deployment practices, leveraging free-tier services to build a resilient, scalable, and observable event-driven microservices architecture on Kubernetes.
+
+**Core Architecture**: Kubernetes (OKE) + Dapr + Managed Kafka (Redpanda Cloud) + GitHub Actions (CI/CD) + Grafana Cloud (Observability)
+- **Frontend/Backend**: Existing Next.js and FastAPI applications (containerized from Phase IV).
+- **Orchestration**: Oracle Kubernetes Engine (OKE) Always Free tier.
+- **Event Bus**: Redpanda Cloud (Kafka-compatible) for Pub/Sub.
+- **Distributed Application Runtime**: Dapr for state management, pub/sub, secrets, and scheduled jobs (bindings).
+- **Database**: Neon Serverless PostgreSQL (external, cloud-hosted - no change from Phase IV).
+- **CI/CD**: GitHub Actions with OIDC Workload Identity for secure, automated deployments.
+- **Observability**: Grafana Cloud Free Tier (Prometheus, Loki, Tempo) integrated with OpenTelemetry Collector.
+
+**Technology Stack**:
+- **Kubernetes**: Oracle Kubernetes Engine (OKE) Always Free
+- **Dapr**: Latest stable version
+- **Kafka-compatible Service**: Redpanda Cloud (Serverless)
+- **CI/CD**: GitHub Actions, Helm
+- **Container Registry**: Oracle Container Registry (OCIR) or Docker Hub
+- **Observability**: Grafana Cloud Free Tier, OpenTelemetry Collector
+- **Infrastructure as Code (Optional but Recommended)**: Terraform (for OKE cluster provisioning, if not manual)
+- **Application**: Phase III Todo Chatbot (frontend + backend)
+
+**Requirements**:
+- Deploy Dapr control plane and components to OKE in HA mode (`--enable-ha=true`).
+- Configure Dapr Pub/Sub component to use Redpanda Cloud (Kafka-compatible serverless).
+- Implement Dapr state management for conversation state (optional, or continue with PostgreSQL).
+- Implement Dapr Bindings (Jobs API) for scheduling recurring tasks/reminders (not cron polling).
+- Utilize Dapr Secrets building block for secure credential management.
+- **Advanced Security (Production)**: Deploy External Secrets Operator (ESO) to sync secrets from cloud providers to Kubernetes without committing to Git.
+- Set up a GitHub Actions workflow for building, pushing (to OCIR/Docker Hub), and deploying Helm charts to OKE.
+- Implement OIDC Workload Identity in GitHub Actions for secure authentication to OKE (eliminates static credentials).
+- Integrate security scanning: Trivy for image vulnerabilities, Kube-Linter for manifest static analysis.
+- Configure Dapr to emit OpenTelemetry traces, metrics, and logs (zero-code instrumentation).
+- Deploy an OpenTelemetry Collector to forward telemetry data to Grafana Cloud Free Tier.
+- Configure Grafana Cloud to visualize application metrics, logs, and distributed traces.
+- **Optional but Recommended**: Set up GitOps with Argo CD or Flux CD for pull-based deployments (Git as single source of truth).
+- Implement advanced application features: Recurring Tasks, Due Dates & Reminders, Priorities, Tags, Search, Filter, Sort.
+
+**Gradual Implementation Strategy**:
+
+**Stage 1: OKE Cluster & Basic Dapr Setup** (Branch: `012-oke-dapr-setup`)
+- Provision OKE cluster using the Oracle Cloud Always Free tier.
+- Configure `kubectl` to connect to the OKE cluster.
+- Install Dapr on OKE using Helm.
+- Verify Dapr control plane health.
+- **Acceptance**: OKE cluster provisioned, Dapr installed and healthy.
+
+**Stage 2: Redpanda Cloud & Dapr Pub/Sub** (Branch: `013-redpanda-pubsub`)
+- Sign up for Redpanda Cloud and create a serverless cluster (or alternative free-tier Kafka).
+- Create required topics (e.g., `task-events`, `reminders`).
+- Configure Dapr Pub/Sub component to connect to Redpanda Cloud.
+- Modify backend to publish/subscribe events via Dapr Pub/Sub API.
+- **Acceptance**: Backend successfully publishes and consumes messages via Dapr/Redpanda.
+
+**Stage 3: Advanced Dapr Features & App Integration** (Branch: `014-dapr-advanced-features`)
+- Implement Dapr bindings for scheduling (e.g., cron bindings for recurring tasks).
+- Integrate Dapr state management or continue using PostgreSQL for conversation state (review trade-offs).
+- Utilize Dapr Secrets for database credentials and API keys.
+- Develop/refactor application logic for advanced features (recurring tasks, reminders).
+- Update Helm charts to include Dapr component definitions.
+- **Acceptance**: Advanced features functional locally on Minikube with Dapr components.
+
+**Stage 4: CI/CD with GitHub Actions & OIDC** (Branch: `015-github-actions-cicd`)
+- Configure OIDC Workload Identity for GitHub Actions to authenticate with OKE.
+- Create GitHub Actions workflows for:
+    - Building and pushing Docker images to OCIR/Docker Hub.
+    - Deploying Helm charts to OKE.
+- Implement environment-specific deployments.
+- **Acceptance**: Automated deployments to OKE triggered by Git pushes.
+
+**Stage 5: Observability with Grafana Cloud** (Branch: `016-observability`)
+- Configure Dapr to emit OpenTelemetry telemetry data (automatic with Dapr config).
+- Deploy OpenTelemetry Collector on OKE.
+- Set up Grafana Cloud free tier account (10k metrics, 50GB logs, 50GB traces).
+- Configure OpenTelemetry Collector to export data to Grafana Cloud (Prometheus, Loki, Tempo).
+- Create Grafana dashboards for Dapr and application metrics, logs, and distributed traces.
+- Set up alerts for critical application and infrastructure issues.
+- **Acceptance**: Comprehensive monitoring and logging visible in Grafana Cloud, distributed tracing working end-to-end.
+
+**Stage 6 (Optional): GitOps Deployment** (Branch: `017-gitops-argocd`)
+- Install Argo CD or Flux CD on OKE cluster.
+- Create GitOps repository with application manifests and Dapr components.
+- Configure Argo CD applications for automated sync from Git.
+- Implement sync policies (automated pruning, self-healing).
+- Update GitHub Actions to commit manifest changes to GitOps repo (not direct deployment).
+- **Acceptance**: Changes to GitOps repo automatically reconciled to cluster, rollback working via Git revert.
+
+**Project Structure for Phase V**:
+```text
+/
+├── phase-5-cloud-deployment/
+│   ├── IMPLEMENTATION_GUIDE.md    # Combined research guide (Claude + Gemini)
+│   ├── oci-setup/                 # Terraform/CLI scripts for OKE provisioning (optional)
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── dapr-components/           # Dapr component YAMLs (pubsub, state, secrets, bindings)
+│   │   ├── kafka-pubsub.yaml
+│   │   ├── statestore.yaml
+│   │   ├── kubernetes-secrets.yaml
+│   │   └── dapr-config.yaml
+│   ├── observability/             # OpenTelemetry and Grafana Cloud configs
+│   │   ├── otel-collector.yaml
+│   │   └── grafana-dashboards/
+│   ├── gitops/ (optional)         # GitOps repository structure
+│   │   ├── apps/
+│   │   ├── dapr-components/
+│   │   └── argocd-applications/
+│   ├── .github/
+│   │   └── workflows/             # GitHub Actions workflows with OIDC
+│   │       ├── build-and-deploy.yaml
+│   │       ├── security-scan.yaml
+│   │       └── ...
+│   ├── kafka/                     # Kafka cluster manifests (Strimzi)
+│   │   └── kafka-cluster.yaml
+│   └── CLAUDE.md
+├── specs/
+│   └── features/
+│       └── 012-advanced-cloud-deployment/
+│           ├── spec.md
+│           ├── plan.md
+│           └── tasks.md
+└── README.md (updated with Phase V instructions)
+```
+
+**Definition of Done (MVP)**:
+- ✅ OKE cluster provisioned and running on Always Free tier (2 nodes, 4 vCPUs total, 24GB RAM total).
+- ✅ Dapr installed on OKE with HA mode enabled (`--enable-ha=true`).
+- ✅ Redpanda Cloud serverless cluster configured and integrated with Dapr Pub/Sub component.
+- ✅ Kafka topics created: `task-events`, `reminders`, `task-updates`.
+- ✅ Backend application publishes/subscribes messages via Dapr Pub/Sub API.
+- ✅ Advanced features implemented: Recurring Tasks (with Dapr Jobs API), Due Dates, Reminders.
+- ✅ Intermediate features implemented: Priorities, Tags, Search, Filter, Sort.
+- ✅ GitHub Actions workflow with OIDC Workload Identity deploys to OKE using Helm (no static credentials).
+- ✅ Security scanning integrated: Trivy for images, Kube-Linter for manifests.
+- ✅ Application deployed and accessible via Ingress with LoadBalancer.
+- ✅ OpenTelemetry Collector deployed and forwarding data to Grafana Cloud.
+- ✅ Basic Grafana dashboards showing: application metrics, logs, distributed traces.
+- ✅ Health checks (liveness/readiness probes) configured for all pods.
+- ✅ Resource limits and requests defined for all containers.
+- ✅ README with complete OKE setup, deployment, and troubleshooting instructions.
+- ✅ Demo video (<90 seconds) showcasing: OKE deployment, Dapr features (recurring task triggering), CI/CD pipeline with OIDC, observability in Grafana.
+
+**Definition of Done (Production-Ready)**:
+- All MVP criteria PLUS:
+- ✅ Full Dapr integration with HA mode (Pub/Sub, State Management, Bindings/Jobs, Secrets, Service Invocation).
+- ✅ Dapr control plane: multiple replicas, dedicated namespace, priority classes, resource limits.
+- ✅ All advanced features fully functional: Recurring Tasks, Due Dates, Reminders, Priorities, Tags, Search, Filter, Sort.
+- ✅ External Secrets Operator (ESO) deployed for advanced secret management (optional enhancement).
+- ✅ Automated CI/CD pipeline with comprehensive testing: unit tests, integration tests, E2E tests.
+- ✅ Security pipeline: vulnerability scanning (Trivy), manifest linting (Kube-Linter), SBOM generation.
+- ✅ Comprehensive observability: distributed tracing across all services, custom dashboards, log aggregation, alerting rules.
+- ✅ Horizontal Pod Autoscaling (HPA) configured based on CPU/memory metrics.
+- ✅ Advanced security: RBAC with least privilege, Network Policies, Pod Security Standards, secrets rotation strategy.
+- ✅ Infrastructure as Code: Terraform/CLI scripts for OKE cluster provisioning and configuration.
+- ✅ GitOps deployment: Argo CD or Flux CD configured with automated sync and self-healing (optional but recommended).
+- ✅ Pod anti-affinity rules for high availability.
+- ✅ PodDisruptionBudgets defined for critical services.
+- ✅ Documented disaster recovery, backup strategy, and rollback procedures.
+- ✅ Performance testing and optimization completed.
+- ✅ Cost monitoring dashboard configured (Oracle Cloud Cost Analysis).
+
+**Branch Sequence**: `012-oke-dapr-setup` → `013-redpanda-pubsub` → `014-dapr-advanced-features` → `015-github-actions-cicd` → `016-observability` → `017-gitops-argocd` (optional)
+
+**Deliverables**:
+- GitHub repository with complete Phase V implementation.
+- IMPLEMENTATION_GUIDE.md in phase-5-cloud-deployment/ (combined research from Claude + Gemini).
+- Terraform/CLI scripts for OKE provisioning (optional but recommended for IaC).
+- Dapr component YAMLs: Pub/Sub, State, Secrets, Config (all as configuration-as-code).
+- OpenTelemetry Collector configuration and deployment manifests.
+- GitHub Actions workflows with OIDC authentication (no static credentials stored).
+- Security scanning reports: Trivy vulnerability scans, Kube-Linter manifest analysis.
+- GitOps repository with application manifests and Argo CD applications (if implemented).
+- CLAUDE.md documenting AI tool usage and all development sessions.
+- README.md with comprehensive setup instructions:
+  - Oracle Cloud account setup
+  - OKE cluster provisioning
+  - Redpanda Cloud configuration
+  - GitHub OIDC setup
+  - Grafana Cloud integration
+  - Local testing with Minikube
+  - Troubleshooting guide
+- Publicly accessible application on OKE with custom domain/ingress.
+- Grafana Cloud dashboards showing:
+  - Application performance metrics
+  - Infrastructure health (node CPU, memory, pod status)
+  - Distributed traces across Dapr service invocations
+  - Log aggregation and search
+  - Alert rules configured
+- Demo video (<90 seconds) demonstrating:
+  1. OKE cluster with deployed application
+  2. Advanced features: adding recurring task, reminder triggering, priority/tag filtering
+  3. Event-driven flow: task created → Kafka event → consumer processing
+  4. GitHub Actions CI/CD with OIDC deploying a change
+  5. Real-time observability in Grafana: metrics dashboard, distributed trace, logs
+  6. (Optional) GitOps: Git commit → Argo CD sync → automatic deployment
 
 **Constitution Compliance**:
-- Complete cloud-native transformation
-- Full observability and monitoring (aligns with professional quality)
-- Demonstrate all bonus features if implemented
+- Complete Cloud-Native transformation with production-ready patterns (Principle VI - Cloud-Native Blueprints +200 bonus).
+- Full observability with zero-code instrumentation (Principle VII - professional quality and scalability).
+- Demonstrate all advanced features including event-driven architecture (Principle VI - maximum bonus points).
+- Strict adherence to SDD workflow for all stages (Principle I & II - spec → plan → tasks → implement).
+- Gradual implementation per Principle VIII (5-6 stages, each independently testable).
+- Use AI-assisted tools for DevOps automation (kubectl-ai, Docker AI if available).
+- Modern security practices: OIDC for CI/CD, ESO for secrets, RBAC with least privilege (Principle VII).
+- Infrastructure as Code with Terraform (optional) for reproducibility (Principle IV - clean structure).
+- GitOps for declarative deployments (optional) aligns with Principle V (no manual interventions).
+- Document all implementation decisions and AI tool usage in CLAUDE.md (Principle V).
+- Reference IMPLEMENTATION_GUIDE.md for detailed step-by-step guidance.
 
 ## Governance
 
@@ -782,4 +999,4 @@ All pull requests and reviews MUST verify compliance with this constitution. Com
 
 Use `CLAUDE.md` for runtime development guidance and session tracking.
 
-**Version**: 1.6.0 | **Ratified**: 2025-12-17 | **Last Amended**: 2026-01-22
+**Version**: 1.7.0 | **Ratified**: 2026-01-25 | **Last Amended**: 2026-01-25
