@@ -39,7 +39,20 @@
       "Bash(kubectl ai --help:*)",
       "Bash(docker ai --help:*)",
       "Bash(docker ai:*)",
-      "Bash(kubectl krew:*)"
+      "Bash(kubectl krew:*)",
+      "Bash(python3:*)",
+      "Bash(for skill in api-client-retry-auth backend-crud-api backend-railway-deployment chatbot-mcp-integration frontend-vercel-deployment local-k8s-deployment nextjs-better-auth-setup password-reset-auth react-form-validation-patterns skill-creator skill-validator task-ui-optimistic-updates)",
+      "Bash(done)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(skills\\): Add local-k8s-deployment skill and fix backend-crud-api structure\n\n- Create local-k8s-deployment skill with Docker, Helm, and Minikube patterns\n- Move backend-crud-api Quick Start example to references \\(559→303 lines\\)\n- Add Phase IV README with layman-friendly technology explanations\n- Document meta skills policy in CLAUDE.md \\(never modify creator/validator\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(.specify/scripts/bash/create-phr.sh:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(oci --version:*)",
+      "Bash(dapr version:*)",
+      "Bash(docker buildx:*)"
     ]
   }
 }

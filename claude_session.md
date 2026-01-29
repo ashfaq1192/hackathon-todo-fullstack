@@ -1,129 +1,106 @@
-● All Gaps Addressed - Phase IV Complete
-  Evidence Summary
+ 🎯 Recommended Migration Workflow
 
-  AI DevOps Tool (kubectl-ai):
-  - Installed krew plugin manager
-  - Installed kubectl-ai plugin
-  - Configured with Gemini API key
-  - Documented installation and usage in phase-4-k8s/CLAUDE.md
+  Here's the optimal sequence for your situation:
 
-  End-to-End Tests:
-  - Backend /health: 200 OK
-  - Backend /api/mcp/tools: 5 MCP tools available
-  - Frontend pages: All returning 200
-  - Cross-service: Frontend → Backend connectivity verified
+  Step 1: Backup Current Work (Current Laptop)
 
-  Lifecycle Operations:
-  REVISION  STATUS      DESCRIPTION
-  1         superseded  Install complete
-  2         superseded  Upgrade complete
-  3         deployed    Rollback to 1
+  # Commit all changes
+  git add .
+  git commit -m "Pre-migration: Phase V setup and documentation"
+  git push origin 010-oke-dapr-setup
 
-  Final Phase IV Requirements Status
-  ┌──────────────────────┬─────────────────────────────────────────────────────────────────────┐
-  │     Requirement      │                               Status                                │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ FR-001 to FR-010     │ ✅ Complete                                                         │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ FR-011 (AI Tool)     │ ✅ Complete                                                         │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ FR-012 (Document AI) │ ✅ Complete                                                         │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ FR-013 to FR-015     │ ✅ Complete                                                         │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ SC-001 to SC-008     │ ✅ Complete (SC-002 backend image 572MB slightly over 500MB target) │
-  ├──────────────────────┼─────────────────────────────────────────────────────────────────────┤
-  │ US1-US5              │ ✅ Complete                                                         │
-  └──────────────────────┴─────────────────────────────────────────────────────────────────────┘
-  Phase IV Local Kubernetes Deployment is now complete!
+  # Push Docker images
+  docker tag todo-frontend:v1 <your-username>/todo-frontend:v1-x86
+  docker tag todo-backend:v1 <your-username>/todo-backend:v1-x86
+  docker push <your-username>/todo-frontend:v1-x86
+  docker push <your-username>/todo-backend:v1-x86
 
-✻ Brewed for 7m 17s
+  # Backup OCI config
+  cp -r ~/.oci ~/oci-backup
 
-❯ How i can test and run the application and what is the link i can share with others so the can test                 
-  interactively?                                                                                                      
+  Step 2: Setup New Laptop
 
-● How to Access the Application
+  # Install tools
+  # - Docker Desktop
+  # - Git
+  # - WSL 2 (if Windows)
+  # - OCI CLI (Phase V prerequisite)
+  # - Dapr CLI (Phase V prerequisite)
+  # - kubectl & Helm (already done)
+  # - Node.js 22+
+  # - Python 3.13+
 
-  Option 1: Port-Forward (Quick Local Testing)
+  Step 3: Clone and Configure
 
-  Run these commands in separate terminals:
+  # Clone repository
+  git clone <your-repo-url>
+  cd hackathon-todo-fullstack
+  git checkout 010-oke-dapr-setup
 
-  # Terminal 1: Frontend
-  kubectl port-forward svc/todo-chatbot-frontend 3000:3000
+  # Restore OCI config
+  mkdir -p ~/.oci
+  cp -r ~/oci-backup/* ~/.oci/
+  chmod 600 ~/.oci/*
 
-  # Terminal 2: Backend  
-  kubectl port-forward svc/todo-chatbot-backend 8000:8000
+  # Verify
+  oci iam region list
+  kubectl version --client
+  helm version
 
-  Then open: http://localhost:3000
+  Step 4: Rebuild Docker Images (ARM64 for OKE)
 
-  Option 2: Via Ingress (todo.local)
+  Since OKE uses ARM64, you'll rebuild anyway:
 
-  Step 1: Add to your hosts file
+  # Setup multi-arch builder
+  docker buildx create --name multiarch --use
+  docker buildx inspect --bootstrap
 
-  # Linux/WSL: 
-  echo "192.168.49.2 todo.local" | sudo tee -a /etc/hosts
+  # Build ARM64 images
+  docker buildx build --platform linux/arm64 \
+    -t <your-username>/todo-frontend:v1-arm64 \
+    -f phase-4-k8s/docker/frontend/Dockerfile \
+    --push \
+    phase-3-chatbot/frontend
 
-  # Windows (run as Admin in PowerShell):
-  Add-Content C:\Windows\System32\drivers\etc\hosts "192.168.49.2 todo.local"
-
-  Step 2: Start Minikube tunnel (required for Windows/WSL)
-  minikube tunnel
-
-  Step 3: Open http://todo.local in your browser
+  docker buildx build --platform linux/arm64 \
+    -t <your-username>/todo-backend:v1-arm64 \
+    -f phase-4-k8s/docker/backend/Dockerfile \
+    --push \
+    phase-3-chatbot/backend
 
   ---
-  Sharing with Others
+  📝 Additional Benefits of 24GB RAM
 
-  Since this is a local Minikube deployment, it's not directly accessible from the internet. Here are your options:   
+  Your new laptop will handle:
+  - ✅ Docker Desktop with multiple containers
+  - ✅ Minikube with Dapr HA mode (12 pods)
+  - ✅ Local development servers (backend + frontend)
+  - ✅ IDE (VS Code) + browser + debugging tools
+  - ✅ OCI kubectl operations smoothly
 
-  Option A: Use ngrok (Quick & Easy)
+  Current memory pressure you're likely experiencing:
+  - Minikube alone: ~4-6GB
+  - Dapr HA mode: ~2-3GB
+  - Docker Desktop: ~2GB
+  - Development tools: ~2-3GB
+  - Total: 10-14GB minimum
 
-  # Install ngrok
-  # https://ngrok.com/download
-
-  # Expose frontend
-  kubectl port-forward svc/todo-chatbot-frontend 3000:3000 &
-  ngrok http 3000
-
-  This gives you a public URL like https://abc123.ngrok.io that others can access.
-
-  Option B: Use Cloudflare Tunnel (Free & Persistent)
-
-  # Install cloudflared
-  # https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
-
-  cloudflared tunnel --url http://localhost:3000
-
-  Option C: Deploy to Cloud (Production-Ready)
-
-  For permanent sharing, deploy to:
-  - Vercel (Frontend) + Railway (Backend) - Already done in Phase III!
-  - Cloud Kubernetes (EKS, GKE, AKS) - Phase V
+  With 24GB, you'll have comfortable headroom!
 
   ---
-  Your Existing Production URLs (Phase III)
+  🚀 Next Steps After Migration
 
-  You already have the app deployed and accessible:
-  ┌──────────┬────────────────────────────────────────────────────────────────────┐
-  │ Service  │                                URL                                 │
-  ├──────────┼────────────────────────────────────────────────────────────────────┤
-  │ Frontend │ https://hackathon-todo-fullstack.vercel.app                        │
-  ├──────────┼────────────────────────────────────────────────────────────────────┤
-  │ Backend  │ https://hackathon-todo-fullstack-backend-production.up.railway.app │
-  └──────────┴────────────────────────────────────────────────────────────────────┘
-  Share this with others: https://hackathon-todo-fullstack.vercel.app
+  1. Verify all tools on new laptop:
+  ./phase-5-cloud-deployment/scripts/verify-prerequisites.sh
+  2. Continue Phase V from where you left off:
+    - Create OKE cluster (Oracle Cloud Always Free)
+    - Install Dapr in HA mode
+    - Deploy ARM64 images
+  3. Reference: Follow phase-5-cloud-deployment/NEXT_STEPS.md (60-75 min total)
 
   ---
-  Quick Test Commands
-
-  # Verify pods are running
-  kubectl get pods
-
-  # Check backend health
-  kubectl exec deploy/todo-chatbot-backend -- curl -s http://localhost:8000/health
-
-  # View logs
-  kubectl logs -f deploy/todo-chatbot-frontend
-  kubectl logs -f deploy/todo-chatbot-backend
-
-  Would you like me to help set up ngrok or another tunneling solution for sharing the local Minikube deployment?  
+  Would you like me to help you with any specific step, such as:
+  1. Creating a pre-migration backup script
+  2. Setting up the new laptop after transfer
+  3. Rebuilding Docker images for ARM64
+  4. Creating the OKE cluster once you're on the new machine
