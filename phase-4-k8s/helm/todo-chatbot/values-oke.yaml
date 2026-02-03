@@ -1,0 +1,75 @@
+# Values override for OKE (Oracle Kubernetes Engine) cloud deployment
+# Usage: helm install todo-chatbot ./helm/todo-chatbot -f values-oke.yaml
+
+# Enable Dapr sidecar injection and consumer services
+dapr:
+  enabled: true
+
+# Backend - Docker Hub images
+backend:
+  replicaCount: 2
+  image:
+    repository: ashfaq1192/todo-backend
+    tag: v2
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Frontend - Docker Hub images
+frontend:
+  replicaCount: 2
+  image:
+    repository: ashfaq1192/todo-frontend
+    tag: v3
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Consumer microservices - Docker Hub images
+notificationService:
+  replicaCount: 1
+  image:
+    repository: ashfaq1192/todo-notification
+    tag: v2
+    pullPolicy: IfNotPresent
+
+recurringTaskService:
+  replicaCount: 1
+  image:
+    repository: ashfaq1192/todo-recurring
+    tag: v2
+    pullPolicy: IfNotPresent
+
+auditService:
+  replicaCount: 1
+  image:
+    repository: ashfaq1192/todo-audit
+    tag: v2
+    pullPolicy: IfNotPresent
+
+# Ingress - cloud LoadBalancer
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  hosts:
+    - host: ""
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend

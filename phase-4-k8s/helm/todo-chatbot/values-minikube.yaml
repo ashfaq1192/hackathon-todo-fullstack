@@ -15,9 +15,9 @@
 backend:
   replicaCount: 1
   image:
-    repository: todo-backend
-    tag: v1
-    pullPolicy: Never  # Use local images loaded via minikube image load
+    repository: ashfaq1192/todo-backend
+    tag: v2
+    pullPolicy: IfNotPresent  # Pull from Docker Hub
   resources:
     limits:
       cpu: 500m
@@ -28,13 +28,13 @@ backend:
   # Environment variables - UPDATE THESE WITH YOUR VALUES
   env:
     # Neon PostgreSQL connection string
-    DATABASE_URL: "postgresql://neondb_owner:npg_23SEMhDfZIKA@ep-holy-flower-a8a79bvt-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
+    DATABASE_URL: "postgresql://user:password@host/dbname?sslmode=require"
     # Gemini API Key (Phase III chatbot uses Gemini, not OpenAI)
-    GEMINI_API_KEY: "AIzaSyDrW3nhjEN2BAXPPm_7snfgTI34sxBLgmM"
+    GEMINI_API_KEY: "your-gemini-api-key"
     # Better Auth secret
-    BETTER_AUTH_SECRET: "m0BJvpuui4TL6kBTmzOhDxxTAh05WbuE5bM9Up4lBUk="
+    BETTER_AUTH_SECRET: "your-better-auth-secret"
     # JWT Secret Key
-    JWT_SECRET_KEY: "2c11009a771bb61286928624339bf8535e33b75dc0b7838dd6effa420a5fce8a"
+    JWT_SECRET_KEY: "your-jwt-secret-key"
     # Logging level
     LOG_LEVEL: "DEBUG"
     # Frontend URL for CORS
@@ -44,9 +44,9 @@ backend:
 frontend:
   replicaCount: 1
   image:
-    repository: todo-frontend
-    tag: v1
-    pullPolicy: Never  # Use local images
+    repository: ashfaq1192/todo-frontend
+    tag: v3
+    pullPolicy: IfNotPresent  # Pull from Docker Hub
   resources:
     limits:
       cpu: 500m
@@ -63,9 +63,9 @@ frontend:
     # Internal backend URL for server-side requests
     BACKEND_URL: "http://todo-chatbot-backend:8000"
     # Better Auth secret (must match backend)
-    BETTER_AUTH_SECRET: "m0BJvpuui4TL6kBTmzOhDxxTAh05WbuE5bM9Up4lBUk="
+    BETTER_AUTH_SECRET: "your-better-auth-secret"
     # Database URL for Better Auth SSR
-    DATABASE_URL: "postgresql://neondb_owner:npg_23SEMhDfZIKA@ep-holy-flower-a8a79bvt-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
+    DATABASE_URL: "postgresql://user:password@host/dbname?sslmode=require"
 
 # Ingress configuration for Minikube
 ingress:

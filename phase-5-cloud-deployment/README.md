@@ -1,280 +1,246 @@
-# Phase V - Oracle Cloud Deployment (Stage 1: OKE & Dapr Setup)
+# Phase V - Advanced Cloud Deployment (Oracle Kubernetes Engine)
 
-**Branch**: `010-oke-dapr-setup`
-**Created**: 2026-01-25
-**Status**: 🚧 In Progress - Prerequisites Installation
+**Branch**: `main`
+**Last Updated**: 2026-02-03
+**Status**: ✅ Ready for Deployment
 
 ---
 
 ## Overview
 
-Stage 1 establishes the foundation infrastructure for Phase V Advanced Cloud Deployment:
-- Oracle Kubernetes Engine (OKE) cluster on Always Free tier
-- Dapr distributed runtime in High Availability mode
-- kubectl configured for local cluster access
-- Docker buildx for ARM64 image builds
-- Zero ongoing costs (100% within Always Free limits)
+Phase V deploys the Todo Chatbot application to Oracle Kubernetes Engine (OKE) with:
+- **OKE Enhanced Cluster** (required - Basic Cluster API is non-functional)
+- **Docker Hub** images for easy deployment
+- **NGINX Ingress Controller** for external access
+- **Neon PostgreSQL** as external database
+- **Gemini AI** for chatbot functionality
 
-**Estimated Time**: 45-60 minutes (including cluster provisioning)
-
----
-
-## Current Status
-
-### ✅ Completed Steps
-
-- [x] Oracle Cloud account created
-- [x] Project directory structure created (`phase-5-cloud-deployment/`, `logs/`, `scripts/`)
-- [x] Prerequisites verification script created
-- [x] Installation guide documented
-
-### 🚧 In Progress
-
-- [ ] Install missing CLI tools (OCI CLI, Dapr CLI, Docker WSL 2 integration)
-- [ ] Configure OCI CLI authentication
-- [ ] Upgrade Oracle account to "Pay As You Go"
-
-### ⏳ Pending
-
-- [ ] Create OKE cluster
-- [ ] Configure kubectl access
-- [ ] Install Dapr control plane
-- [ ] Verify complete setup
+**Estimated Cost**: ~$3/day (delete cluster after demo to minimize costs)
 
 ---
 
 ## Quick Start
 
-### Step 1: Install Prerequisites (Current Step)
+### Option 1: Complete Beginner Guide
 
-You have kubectl and Helm installed. Still need:
+📖 **[oracle_guide.md](./oracle_guide.md)** - Step-by-step guide from account creation to deployment
 
-1. **OCI CLI** (Oracle Cloud CLI)
-   ```bash
-   bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
-   ```
+### Option 2: Experienced Users
 
-2. **Dapr CLI**
-   ```bash
-   wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
-   ```
+If you're familiar with Kubernetes:
 
-3. **Docker Desktop WSL 2 Integration**
-   - Open Docker Desktop on Windows
-   - Settings → Resources → WSL Integration
-   - Enable integration with your WSL distro
-   - Apply & Restart
-
-**Detailed instructions**: See [SETUP_PREREQUISITES.md](./SETUP_PREREQUISITES.md)
-
-**Verify all tools**:
 ```bash
-./phase-5-cloud-deployment/scripts/verify-prerequisites.sh
+# 1. Create OKE Enhanced Cluster via OCI Console
+# 2. Configure kubectl (use OCI Cloud Shell)
+# 3. Install Ingress Controller
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace
+
+# 4. Create secrets
+kubectl create secret generic todo-backend-secrets \
+  --from-literal=DATABASE_URL="your-neon-url" \
+  --from-literal=GEMINI_API_KEY="your-key" \
+  --from-literal=BETTER_AUTH_SECRET="your-secret" \
+  --from-literal=JWT_SECRET_KEY="your-jwt-secret"
+
+# 5. Deploy application
+kubectl apply -f k8s/
+
+# 6. Get external IP
+kubectl get svc -n ingress-nginx
 ```
 
 ---
 
-### Step 2: Configure OCI CLI (After Installation)
+## Docker Hub Images
+
+All images are built for `linux/amd64` and publicly available:
+
+| Image | Tag | Size | Description |
+|-------|-----|------|-------------|
+| `ashfaq1192/todo-backend` | v2 | ~600MB | FastAPI + MCP Tools + Gemini |
+| `ashfaq1192/todo-frontend` | v3 | ~350MB | Next.js + Better Auth |
+| `ashfaq1192/todo-audit` | v2 | ~200MB | Audit logging service |
+| `ashfaq1192/todo-notification` | v2 | ~200MB | Notification service |
+| `ashfaq1192/todo-recurring` | v2 | ~200MB | Recurring task service |
+
+### Pull Images
 
 ```bash
-# Run interactive setup
-oci setup config
+docker pull ashfaq1192/todo-backend:v2
+docker pull ashfaq1192/todo-frontend:v3
 ```
-
-**You'll need from OCI Console**:
-1. User OCID (Profile → User Settings → copy OCID)
-2. Tenancy OCID (Profile → Tenancy → copy OCID)
-3. Region (e.g., us-ashburn-1)
-
-**Post-configuration**:
-- Upload public key to OCI Console → User Settings → API Keys
-- Verify: `oci iam region list`
-
----
-
-### Step 3: Follow Complete Setup Guide
-
-Once prerequisites are installed, follow the comprehensive step-by-step guide:
-
-📖 **[specs/010-oke-dapr-setup/quickstart.md](../specs/010-oke-dapr-setup/quickstart.md)**
-
-This guide covers:
-- Oracle Cloud account upgrade to "Pay As You Go"
-- Budget alert configuration
-- OKE cluster creation
-- kubectl configuration
-- Docker buildx setup
-- Dapr installation
-- Complete verification
-
----
-
-## Key Resources
-
-### Documentation
-
-- **Specification**: [specs/010-oke-dapr-setup/spec.md](../specs/010-oke-dapr-setup/spec.md)
-- **Implementation Plan**: [specs/010-oke-dapr-setup/plan.md](../specs/010-oke-dapr-setup/plan.md)
-- **Tasks Breakdown**: [specs/010-oke-dapr-setup/tasks.md](../specs/010-oke-dapr-setup/tasks.md)
-- **Quickstart Guide**: [specs/010-oke-dapr-setup/quickstart.md](../specs/010-oke-dapr-setup/quickstart.md)
-- **CLI Commands Reference**: [specs/010-oke-dapr-setup/contracts/cli-commands.md](../specs/010-oke-dapr-setup/contracts/cli-commands.md)
-- **Verification Checklist**: [specs/010-oke-dapr-setup/contracts/verification-checklist.md](../specs/010-oke-dapr-setup/contracts/verification-checklist.md)
-
-### Scripts
-
-- **Prerequisites Verification**: `./scripts/verify-prerequisites.sh`
-- **Stage 1 Verification**: (Will be created after cluster setup)
-
-### Logs
-
-Verification outputs will be saved to `./logs/`:
-- `cluster-nodes.txt` - Node status
-- `dapr-status.txt` - Dapr control plane status
-- `resource-utilization.txt` - CPU/memory usage
-- Additional verification logs as setup progresses
 
 ---
 
 ## Architecture
 
-### Infrastructure Components
-
 ```
-Oracle Cloud (Always Free Tier)
-└─ OKE Cluster (todo-chatbot-cluster)
-   ├─ Control Plane (Managed by Oracle)
-   │  └─ Kubernetes API Server (v1.28)
-   │
-   └─ Worker Nodes (2 nodes)
-      ├─ Node 1: VM.Standard.A1.Flex (ARM64)
-      │  ├─ 2 vCPUs
-      │  └─ 12 GB RAM
-      │
-      └─ Node 2: VM.Standard.A1.Flex (ARM64)
-         ├─ 2 vCPUs
-         └─ 12 GB RAM
-
-Dapr Control Plane (HA Mode)
-└─ dapr-system namespace
-   ├─ dapr-operator (3 replicas)
-   ├─ dapr-sidecar-injector (3 replicas)
-   ├─ dapr-sentry (3 replicas)
-   └─ dapr-placement-server (3 replicas)
+                    ┌─────────────────────────────────────────┐
+                    │         Oracle Cloud (OKE)              │
+                    │                                         │
+┌──────────┐        │  ┌─────────────────────────────────┐   │
+│  Users   │───────▶│  │      NGINX Ingress Controller   │   │
+└──────────┘        │  │         (LoadBalancer)          │   │
+                    │  └──────────────┬──────────────────┘   │
+                    │                 │                       │
+                    │    ┌────────────┴────────────┐         │
+                    │    │                         │         │
+                    │    ▼                         ▼         │
+                    │  ┌───────────┐       ┌─────────────┐   │
+                    │  │  Backend  │       │  Frontend   │   │
+                    │  │  (2 pods) │◀─────▶│  (2 pods)   │   │
+                    │  │  FastAPI  │       │   Next.js   │   │
+                    │  └─────┬─────┘       └─────────────┘   │
+                    │        │                               │
+                    └────────┼───────────────────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │  Neon PostgreSQL │
+                    │  (External DB)   │
+                    └─────────────────┘
 ```
-
-### Total Resources
-
-- **Compute**: 4 vCPUs (100% of Always Free quota)
-- **Memory**: 24 GB (100% of Always Free quota)
-- **Architecture**: ARM64/aarch64
-- **Cost**: $0.00 perpetual (Always Free tier)
-
----
-
-## Success Criteria
-
-This stage is complete when:
-
-- ✅ OKE cluster status = ACTIVE in OCI Console
-- ✅ `kubectl get nodes` returns 2 nodes in Ready status
-- ✅ Both nodes show ARM64 architecture
-- ✅ `dapr status -k` shows all 4 components HEALTHY with 3 replicas each
-- ✅ Test deployment successfully injects Dapr sidecar
-- ✅ All verification commands execute without errors
-- ✅ OCI Cost Analysis shows $0.00 charges
-- ✅ Complete documentation and logs captured
 
 ---
 
 ## Important Notes
 
-### ⚠️ ARM64 Architecture
+### ⚠️ Enhanced Cluster Required
 
-**CRITICAL**: OKE Always Free tier nodes are ARM64, NOT x86/amd64.
+**CRITICAL**: You MUST create an **Enhanced Cluster**, not a Basic Cluster.
 
-All Docker images MUST be built for ARM64:
-```bash
-docker buildx build --platform linux/arm64 \
-  -t <image>:arm64 \
-  -f <Dockerfile> \
-  --load <context>
+- Basic Cluster API is non-functional (returns errors)
+- Enhanced Cluster costs ~$3/day
+- **Strategy**: Deploy → Demo → Delete within 24 hours
+
+### 💰 Cost Management
+
+| Resource | Daily Cost |
+|----------|------------|
+| OKE Enhanced Control Plane | ~$2.40 |
+| Worker Nodes (2x VM.Standard.E4.Flex) | ~$0.50 |
+| Load Balancer | ~$0.10 |
+| **Total** | **~$3.00/day** |
+
+**Recommendation**: Delete cluster immediately after recording demo video.
+
+### 🏗️ Architecture
+
+- **Platform**: `linux/amd64` (x86_64)
+- **Node Shape**: VM.Standard.E4.Flex (1 OCPU, 8GB RAM each)
+- **Compatible with**: Local Docker, Minikube, and OKE
+
+---
+
+## Directory Structure
+
+```
+phase-5-cloud-deployment/
+├── README.md                    # This file
+├── oracle_guide.md              # Complete beginner deployment guide
+├── IMPLEMENTATION_GUIDE.md      # Detailed implementation reference
+├── SETUP_PREREQUISITES.md       # Prerequisites installation
+├── NEXT_STEPS.md               # Future enhancements
+├── k8s/                        # Kubernetes manifests
+│   ├── backend-deployment.yaml
+│   ├── frontend-deployment.yaml
+│   ├── ingress.yaml
+│   └── secrets.yaml (template)
+├── dapr/                       # Dapr components (future)
+│   └── components/
+├── scripts/                    # Deployment scripts
+│   └── verify-prerequisites.sh
+└── docs.md                     # Additional documentation
 ```
 
-Deploying x86 images will cause **"Exec format error"** after deployment.
+---
 
-### 💰 Cost Monitoring
+## Local Testing (Minikube)
 
-- Always Free resources are perpetual (no expiration)
-- Budget alerts configured at $10 threshold
-- Regular checks: OCI Console → Billing & Cost Management
-- Expected cost: **$0.00**
+Before deploying to OKE, test locally with Minikube:
 
-### 🔑 kubectl Token Expiration
+```bash
+# Start Minikube
+minikube start --driver=docker --memory=4096 --cpus=2
 
-- OIDC tokens expire after 8 hours
-- Refresh command:
-  ```bash
-  oci ce cluster create-kubeconfig \
-    --cluster-id <ocid> \
-    --file ~/.kube/config \
-    --region <region> \
-    --token-version 2.0.0 \
-    --kube-endpoint PUBLIC_ENDPOINT \
-    --overwrite
-  ```
+# Enable Ingress
+minikube addons enable ingress
 
-### 👤 Single-Developer Constraint
+# Deploy using Helm
+cd phase-4-k8s
+helm install todo-chatbot ./helm/todo-chatbot \
+  -f ./helm/todo-chatbot/values-minikube.yaml
 
-- Always Free quota: 4 vCPUs, 24 GB RAM total
-- This cluster consumes 100% of quota
-- Multiple developers require separate Oracle Cloud tenancies
+# Access via port-forward
+kubectl port-forward svc/todo-chatbot-frontend 3000:3000
+
+# Open http://localhost:3000
+```
+
+---
+
+## Deployment Checklist
+
+### Pre-Deployment
+- [ ] Oracle Cloud account created
+- [ ] Docker Hub images verified
+- [ ] Environment variables ready (DATABASE_URL, GEMINI_API_KEY, etc.)
+
+### Deployment
+- [ ] OKE Enhanced Cluster created (~15 min)
+- [ ] kubectl configured via Cloud Shell
+- [ ] NGINX Ingress Controller installed
+- [ ] Kubernetes secrets created
+- [ ] Application deployed
+- [ ] External IP obtained
+
+### Verification
+- [ ] Health endpoint responds: `curl http://<IP>/health`
+- [ ] Frontend loads in browser
+- [ ] User can sign up and log in
+- [ ] Tasks can be created
+- [ ] Chatbot responds to queries
+
+### Post-Demo Cleanup
+- [ ] Delete Kubernetes resources
+- [ ] Delete OKE cluster
+- [ ] Verify no resources remain (Compute, Load Balancers, Block Storage)
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+| Problem | Solution |
+|---------|----------|
+| Pods in "Pending" | Check node resources: `kubectl describe nodes` |
+| ImagePullBackOff | Verify Docker Hub images are public |
+| 502 Bad Gateway | Check pod logs: `kubectl logs deploy/todo-backend` |
+| CORS errors | Verify FRONTEND_URL matches access URL |
+| Database connection failed | Check DATABASE_URL and Neon IP allowlist |
 
-**"Cluster creation failed - quota exceeded"**
-- Check: Governance → Limits & Quotas → Compute
-- Solution: Delete existing compute resources or create new account
-
-**"kubectl: connection refused"**
-- Cause: Token expired (8-hour limit)
-- Solution: Re-run `oci ce cluster create-kubeconfig` with `--overwrite`
-
-**"Docker exec format error"**
-- Cause: x86 image on ARM64 node
-- Solution: Rebuild with `--platform linux/arm64`
-
-**"Dapr pods CrashLoopBackOff"**
-- Check: `kubectl top nodes` (resource utilization)
-- Solution: Verify sufficient memory, check pod logs
-
-**Detailed troubleshooting**: See quickstart.md section "Common Issues & Solutions"
+**Full troubleshooting guide**: See [oracle_guide.md](./oracle_guide.md#12-troubleshooting)
 
 ---
 
-## Next Steps After Stage 1
+## Related Documentation
 
-Once this stage is complete:
-
-1. **Verify all success criteria** (verification-checklist.md)
-2. **Capture logs** to `./logs/` directory
-3. **Commit changes** to Git
-4. **Proceed to Stage 2**: Redpanda Cloud & Dapr Pub/Sub Integration
+- **Phase IV (Local K8s)**: [../phase-4-k8s/README.md](../phase-4-k8s/README.md)
+- **Phase III (Chatbot)**: [../phase-3-chatbot/README.md](../phase-3-chatbot/README.md)
+- **Hackathon Requirements**: [../Hackathon II - Todo Spec-Driven Development.pdf](../Hackathon%20II%20-%20Todo%20Spec-Driven%20Development.pdf)
+- **Project Constitution**: [../.specify/memory/constitution.md](../.specify/memory/constitution.md)
 
 ---
 
-## External References
+## External Resources
 
-- **Oracle Cloud OKE**: https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm
-- **Always Free Tier**: https://www.oracle.com/cloud/free/
-- **Dapr Documentation**: https://docs.dapr.io/
-- **Dapr on Kubernetes**: https://docs.dapr.io/operations/hosting/kubernetes/
-- **Docker Buildx**: https://docs.docker.com/build/buildx/
+- [Oracle OKE Documentation](https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Helm Documentation](https://helm.sh/docs/)
+- [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
 
 ---
 
-**Last Updated**: 2026-01-25
-**Next Review**: After prerequisites installation complete
+**Maintained by**: AI-Assisted Development (Claude Code)
+**Last Updated**: 2026-02-03
