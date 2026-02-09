@@ -1,0 +1,16 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: reminder-cron
+  namespace: todo
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    # Check for due reminders every minute
+    - name: schedule
+      value: "@every 1m"
+    - name: direction
+      value: "input"
+scopes:
+  - notification-service

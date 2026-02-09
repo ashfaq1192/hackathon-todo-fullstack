@@ -1,0 +1,71 @@
+{{- if .Values.dapr.enabled }}
+# Notification Service - Consumes reminders topic via Dapr Pub/Sub
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chatbot.fullname" . }}-notification
+  labels:
+    {{- include "todo-chatbot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notification-service
+spec:
+  replicas: {{ .Values.notificationService.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "todo-chatbot.name" . }}-notification
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "todo-chatbot.name" . }}-notification
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "notification-service"
+        dapr.io/app-port: "8001"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: notification-service
+          image: "{{ .Values.notificationService.image.repository }}:{{ .Values.notificationService.image.tag }}"
+          imagePullPolicy: {{ .Values.notificationService.image.pullPolicy | default "Never" }}
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chatbot.fullname" . }}-notification
+  labels:
+    {{- include "todo-chatbot.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8001
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "todo-chatbot.name" . }}-notification
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

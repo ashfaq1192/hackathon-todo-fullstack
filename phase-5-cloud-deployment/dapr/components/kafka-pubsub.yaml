@@ -1,0 +1,43 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+  namespace: todo
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    # Local Redpanda broker (override via values for cloud)
+    - name: brokers
+      value: "redpanda.kafka.svc.cluster.local:9092"
+    - name: consumerGroup
+      value: "todo-chatbot"
+    - name: authType
+      value: "none"
+    # Production overrides (Redpanda Cloud with SASL)
+    # - name: authType
+    #   value: "password"
+    # - name: saslUsername
+    #   secretKeyRef:
+    #     name: kafka-secrets
+    #     key: sasl-username
+    # - name: saslPassword
+    #   secretKeyRef:
+    #     name: kafka-secrets
+    #     key: sasl-password
+    # - name: saslMechanism
+    #   value: "SCRAM-SHA-256"
+    # - name: requiredAcks
+    #   value: "all"
+    - name: maxMessageBytes
+      value: "1048576"
+    - name: disableTls
+      value: "true"
+    # Auto-create topics for local development
+    - name: initialOffset
+      value: "newest"
+scopes:
+  - backend
+  - notification-service
+  - recurring-task-service
+  - audit-service

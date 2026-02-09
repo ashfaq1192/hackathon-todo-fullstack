@@ -1,5 +1,4 @@
 # Frontend Deployment
-# TODO: Complete with SDD workflow
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +15,12 @@ spec:
     metadata:
       labels:
         {{- include "todo-chatbot.frontend.selectorLabels" . | nindent 8 }}
+      {{- if .Values.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "frontend"
+        dapr.io/app-port: "3000"
+      {{- end }}
     spec:
       containers:
         - name: frontend

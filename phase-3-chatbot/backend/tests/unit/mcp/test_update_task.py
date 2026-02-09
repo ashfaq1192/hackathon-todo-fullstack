@@ -180,7 +180,7 @@ def test_update_task_empty_title(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Title cannot be empty"
+    assert result["error"] == "Empty title"
 
 
 def test_update_task_title_too_long(session):
@@ -256,7 +256,7 @@ def test_update_task_not_found(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "not found" in result["message"].lower()
 
 
@@ -276,7 +276,7 @@ def test_update_task_wrong_user(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "doesn't belong to you" in result["message"].lower()
 
     # Verify task is unchanged
@@ -394,3 +394,121 @@ def test_update_task_all_priority_values(session):
     assert result_medium["success"] is True
     session.refresh(task)
     assert task.priority == TaskPriority.medium
+
+
+def test_update_task_due_date(session):
+    """Test updating due date."""
+    task = Task(user_id="test_user", title="Task", complete=False)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        due_date="2026-03-15T10:00:00",
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "due_date" in result["updated_fields"]
+    session.refresh(task)
+    assert task.due_date is not None
+
+
+def test_update_task_clear_due_date(session):
+    """Test clearing due date by setting to 'none'."""
+    from datetime import datetime
+    task = Task(user_id="test_user", title="Task", complete=False, due_date=datetime(2026, 3, 15))
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        due_date="none",
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "due_date (cleared)" in result["updated_fields"]
+    session.refresh(task)
+    assert task.due_date is None
+
+
+def test_update_task_invalid_due_date(session):
+    """Test error when due date format is invalid."""
+    task = Task(user_id="test_user", title="Task", complete=False)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        due_date="not-a-date",
+        db=session,
+    )
+
+    assert result["success"] is False
+    assert result["error"] == "Invalid due_date"
+
+
+def test_update_task_recurring(session):
+    """Test updating recurring schedule."""
+    from src.models.task import RecurringType
+    task = Task(user_id="test_user", title="Task", complete=False)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        recurring="weekly",
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "recurring" in result["updated_fields"]
+    session.refresh(task)
+    assert task.recurring == RecurringType.weekly
+
+
+def test_update_task_invalid_recurring(session):
+    """Test error when recurring type is invalid."""
+    task = Task(user_id="test_user", title="Task", complete=False)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        recurring="biweekly",
+        db=session,
+    )
+
+    assert result["success"] is False
+    assert result["error"] == "Invalid recurring type"
+
+
+def test_update_task_tags(session):
+    """Test updating tags."""
+    task = Task(user_id="test_user", title="Task", complete=False)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = update_task(
+        user_id="test_user",
+        task_id=task.id,
+        tags=["work", "urgent"],
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "tags" in result["updated_fields"]
+    session.refresh(task)
+    assert task.tags == ["work", "urgent"]

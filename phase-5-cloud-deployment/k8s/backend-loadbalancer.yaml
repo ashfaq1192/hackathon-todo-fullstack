@@ -1,0 +1,14 @@
+# Backend LoadBalancer - Exposes backend API publicly for browser-side API calls
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend-lb
+  namespace: todo-app
+spec:
+  type: LoadBalancer
+  selector:
+    app: todo-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

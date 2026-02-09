@@ -67,7 +67,7 @@ def test_delete_task_not_found(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "not found" in result["message"].lower()
 
 
@@ -91,7 +91,7 @@ def test_delete_task_wrong_user(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "doesn't belong to you" in result["message"].lower()
 
     # Verify task still exists
@@ -298,4 +298,4 @@ def test_delete_task_double_delete_attempt(session):
     # Second delete - should fail (task no longer exists)
     result2 = delete_task(user_id="test_user", task_id=task_id, db=session)
     assert result2["success"] is False
-    assert result2["error"] == "Task not found"
+    assert result2["error"] == "Task not found or unauthorized"

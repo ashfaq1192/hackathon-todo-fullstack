@@ -2,7 +2,7 @@
 Task API routes for CRUD operations.
 
 This module implements RESTful endpoints for task management:
-- GET /api/{user_id}/tasks - List all tasks for a user
+- GET /api/{user_id}/tasks - List all tasks for a user (with search/filter/sort)
 - POST /api/{user_id}/tasks - Create a new task
 - GET /api/{user_id}/tasks/{task_id} - Get a specific task
 - PUT /api/{user_id}/tasks/{task_id} - Update entire task
@@ -12,7 +12,7 @@ This module implements RESTful endpoints for task management:
 
 import logging
 
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlmodel import Session
 
 from src.api.dependencies import get_current_user, verify_user_id_match
@@ -22,8 +22,10 @@ from src.database.crud import (
     delete_task,
     get_task_by_id,
     get_tasks_by_user,
+    get_tasks_filtered,
     update_task,
 )
+from src.models.task import TaskPriority
 from src.schemas.task import (
     TaskCreate,
     TaskListResponse,
@@ -39,64 +41,66 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# User Story 1: List User's Tasks (T050-T053)
+# User Story 1: List User's Tasks (T050-T053) - with search/filter/sort
 @router.get(
     "/{user_id}/tasks",
     response_model=TaskListResponse,
     status_code=status.HTTP_200_OK,
     summary="List all tasks for a user",
-    description="Retrieve all tasks belonging to the authenticated user",
+    description="Retrieve tasks with optional search, filtering, and sorting",
     responses={
-        200: {
-            "description": "Successfully retrieved task list",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "tasks": [
-                            {
-                                "id": 1,
-                                "user_id": "user123",
-                                "title": "Complete Phase II",
-                                "description": "Implement Backend API",
-                                "complete": False,
-                                "created_at": "2025-12-20T10:00:00Z",
-                                "updated_at": "2025-12-20T10:00:00Z",
-                            }
-                        ],
-                        "count": 1,
-                    }
-                }
-            },
-        },
+        200: {"description": "Successfully retrieved task list"},
         401: {"description": "Unauthorized - Invalid or missing JWT token"},
         403: {"description": "Forbidden - User ID mismatch"},
     },
 )
 def list_tasks(
     user_id: str,
+    search: str | None = Query(None, description="Search keyword in title/description"),
+    task_status: str | None = Query(None, alias="status", description="Filter: all/pending/completed"),
+    priority: str | None = Query(None, description="Filter by priority: low/medium/high"),
+    tags: list[str] | None = Query(None, description="Filter by tags"),
+    sort_by: str = Query("created_at", description="Sort: created_at/due_date/priority/title"),
+    sort_order: str = Query("desc", description="Sort order: asc/desc"),
     current_user: str = Depends(get_current_user),
     session: Session = Depends(get_session),
 ) -> TaskListResponse:
     """
-    List all tasks for a specific user.
+    List all tasks for a specific user with optional search, filtering, and sorting.
 
     Args:
         user_id: User ID from path parameter
-        current_user: Authenticated user ID from JWT token (dependency injection)
-        session: Database session (dependency injection)
+        search: Optional keyword search in title/description
+        task_status: Optional status filter (all/pending/completed)
+        priority: Optional priority filter (low/medium/high)
+        tags: Optional tag filter
+        sort_by: Sort field (created_at/due_date/priority/title)
+        sort_order: Sort direction (asc/desc)
+        current_user: Authenticated user ID from JWT token
+        session: Database session
 
     Returns:
         TaskListResponse containing list of tasks and count
-
-    Raises:
-        HTTPException: 401 if authentication fails
-        HTTPException: 403 if user_id doesn't match authenticated user
     """
     # T051: Verify user_id matches authenticated user
     verify_user_id_match(current_user, user_id)
 
-    # T052: Query tasks for the user
-    tasks = get_tasks_by_user(session, user_id)
+    # Use filtered query if any filter/search/sort params provided
+    has_filters = any([search, task_status, priority, tags, sort_by != "created_at", sort_order != "desc"])
+
+    if has_filters:
+        tasks = get_tasks_filtered(
+            session,
+            user_id,
+            search=search,
+            status=task_status,
+            priority=priority,
+            tags=tags,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+    else:
+        tasks = get_tasks_by_user(session, user_id)
 
     logger.info(f"Retrieved {len(tasks)} tasks for user {user_id}")
 
@@ -115,22 +119,7 @@ def list_tasks(
     summary="Create a new task for a user",
     description="Create a new task for the authenticated user",
     responses={
-        201: {
-            "description": "Task created successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": 1,
-                        "user_id": "user123",
-                        "title": "Finish Project",
-                        "description": "Implement all API endpoints",
-                        "complete": False,
-                        "created_at": "2025-12-20T11:00:00Z",
-                        "updated_at": "2025-12-20T11:00:00Z",
-                    }
-                }
-            },
-        },
+        201: {"description": "Task created successfully"},
         400: {"description": "Bad Request - Invalid input data"},
         401: {"description": "Unauthorized - Invalid or missing JWT token"},
         403: {"description": "Forbidden - User ID mismatch"},
@@ -149,22 +138,35 @@ def create_new_task(
     Args:
         user_id: User ID from path parameter
         task_in: Task creation data from request body
-        current_user: Authenticated user ID from JWT token (dependency injection)
-        session: Database session (dependency injection)
+        current_user: Authenticated user ID from JWT token
+        session: Database session
 
     Returns:
         The newly created task
-
-    Raises:
-        HTTPException: 401 if authentication fails
-        HTTPException: 403 if user_id doesn't match authenticated user
-        HTTPException: 409 if a task with the same title already exists
     """
     # T055: Verify user_id matches authenticated user
     verify_user_id_match(current_user, user_id)
 
-    # T056: Create the new task
-    new_task = create_task(session, user_id=user_id, title=task_in.title, description=task_in.description)
+    # T056: Create the new task with all fields
+    extra_fields = {}
+    if task_in.priority:
+        extra_fields["priority"] = task_in.priority
+    if task_in.due_date:
+        extra_fields["due_date"] = task_in.due_date
+    if task_in.recurring:
+        extra_fields["recurring"] = task_in.recurring
+    if task_in.recurring_end_date:
+        extra_fields["recurring_end_date"] = task_in.recurring_end_date
+    if task_in.tags:
+        extra_fields["tags"] = task_in.tags
+
+    new_task = create_task(
+        session,
+        user_id=user_id,
+        title=task_in.title,
+        description=task_in.description,
+        **extra_fields,
+    )
     logger.info(f"Created task '{new_task.title}' for user {user_id}")
 
     # T057: Return the created task
@@ -193,20 +195,6 @@ def get_task(
 ) -> TaskResponse:
     """
     Retrieve a single task by its ID.
-
-    Args:
-        user_id: User ID from path parameter
-        task_id: Task ID from path parameter
-        current_user: Authenticated user ID from JWT token
-        session: Database session
-
-    Returns:
-        The requested task
-
-    Raises:
-        HTTPException: 401 if authentication fails
-        HTTPException: 403 if the user does not own the task
-        HTTPException: 404 if the task is not found
     """
     # T060: Verify user_id matches authenticated user
     verify_user_id_match(current_user, user_id)
@@ -249,16 +237,6 @@ def update_existing_task(
 ) -> TaskResponse:
     """
     Update an existing task.
-
-    Args:
-        user_id: The ID of the user.
-        task_id: The ID of the task to update.
-        task_in: The new task data.
-        current_user: The current authenticated user.
-        session: The database session.
-
-    Returns:
-        The updated task.
     """
     verify_user_id_match(current_user, user_id)
     task = get_task_by_id(session, task_id)
@@ -269,7 +247,6 @@ def update_existing_task(
 
     updated_task = update_task(session, task_id, task_in.model_dump())
     if not updated_task:
-        # This case should ideally not be reached if the above checks pass
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found after update")
 
     logger.info(f"Updated task {task_id} for user {user_id}")
@@ -299,16 +276,6 @@ def partially_update_task(
 ) -> TaskResponse:
     """
     Partially update an existing task.
-
-    Args:
-        user_id: The ID of the user.
-        task_id: The ID of the task to update.
-        task_in: The fields to update.
-        current_user: The current authenticated user.
-        session: The database session.
-
-    Returns:
-        The updated task.
     """
     verify_user_id_match(current_user, user_id)
     task = get_task_by_id(session, task_id)
@@ -350,12 +317,6 @@ def delete_task_by_id(
 ):
     """
     Delete a task by its ID.
-
-    Args:
-        user_id: The ID of the user.
-        task_id: The ID of the task to delete.
-        current_user: The current authenticated user.
-        session: The database session.
     """
     verify_user_id_match(current_user, user_id)
     task = get_task_by_id(session, task_id)

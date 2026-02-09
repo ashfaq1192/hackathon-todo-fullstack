@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Task, TaskPriority } from '@/types/task';
+import { Task, TaskPriority, RecurringType } from '@/types/task';
 import { apiClient, getUserId } from '@/lib/api/client';
 import { updateTaskSchema, UpdateTaskInput } from '@/lib/validation/schemas';
 import { Button } from '@/components/ui/Button';
@@ -39,29 +39,36 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
     return new Date(dateString).toLocaleString();
   };
 
+  const formatDueDate = (dateString: string | null) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const isOverdue = (dateString: string | null) => {
+    if (!dateString) return false;
+    return new Date(dateString) < new Date() && !isComplete;
+  };
+
   const handleToggleComplete = async () => {
     const originalIsComplete = isComplete;
-    // Optimistically update the UI
     setIsComplete(!isComplete);
 
     const userId = getUserId();
     if (!userId) {
       toast.error('User not found');
-      setIsComplete(originalIsComplete); // Revert
+      setIsComplete(originalIsComplete);
       return;
     }
 
     try {
       await apiClient.patchTask(userId, task.id, { complete: !isComplete });
       toast.success(`Task marked as ${!isComplete ? 'complete' : 'incomplete'}`);
-
-      // Update parent if callback provided
       if (onTaskUpdated) {
         onTaskUpdated({ ...task, complete: !isComplete });
       }
     } catch (err: any) {
       toast.error('Failed to update task. Please try again.');
-      // Revert the UI change on error
       setIsComplete(originalIsComplete);
     }
   };
@@ -99,13 +106,9 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
 
       toast.success('Task updated successfully!');
       setIsEditing(false);
-
-      // Update parent if callback provided
       if (onTaskUpdated) {
         onTaskUpdated(updatedTask);
       }
-
-      // Update local state
       setIsComplete(updatedTask.complete);
     } catch (err: any) {
       toast.error(err.message || 'Failed to update task. Please try again.');
@@ -132,8 +135,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
     try {
       await apiClient.deleteTask(userId, task.id);
       toast.success('Task deleted successfully!');
-
-      // Notify parent to remove from list
       if (onTaskDeleted) {
         onTaskDeleted(task.id);
       }
@@ -160,19 +161,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
                 errors.title ? 'border-red-500' : 'border-gray-300'
               }`}
               aria-invalid={errors.title ? 'true' : 'false'}
-              aria-describedby={errors.title ? `edit-title-error-${task.id}` : undefined}
             />
             {errors.title && (
-              <p id={`edit-title-error-${task.id}`} className="text-xs text-red-500 mt-1" role="alert">
-                {errors.title.message}
-              </p>
+              <p className="text-xs text-red-500 mt-1" role="alert">{errors.title.message}</p>
             )}
           </div>
 
           <div className="mb-3">
-            <label htmlFor={`edit-description-${task.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
+            <label htmlFor={`edit-description-${task.id}`} className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               {...register('description')}
               id={`edit-description-${task.id}`}
@@ -180,38 +176,20 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
               className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
-              aria-invalid={errors.description ? 'true' : 'false'}
-              aria-describedby={errors.description ? `edit-description-error-${task.id}` : undefined}
             />
-            {errors.description && (
-              <p id={`edit-description-error-${task.id}`} className="text-xs text-red-500 mt-1" role="alert">
-                {errors.description.message}
-              </p>
-            )}
           </div>
 
           <div className="mb-3">
-            <label htmlFor={`edit-priority-${task.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-              Priority <span className="text-red-500">*</span>
-            </label>
+            <label htmlFor={`edit-priority-${task.id}`} className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
             <select
               {...register('priority')}
               id={`edit-priority-${task.id}`}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${
-                errors.priority ? 'border-red-500' : 'border-gray-300'
-              }`}
-              aria-invalid={errors.priority ? 'true' : 'false'}
-              aria-describedby={errors.priority ? `edit-priority-error-${task.id}` : undefined}
+              className="w-full px-3 py-2 border rounded-md border-gray-300"
             >
-              <option value="low">🟢 Low Priority</option>
-              <option value="medium">🟡 Medium Priority</option>
-              <option value="high">🔴 High Priority</option>
+              <option value="low">Low Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="high">High Priority</option>
             </select>
-            {errors.priority && (
-              <p id={`edit-priority-error-${task.id}`} className="text-xs text-red-500 mt-1" role="alert">
-                {errors.priority.message}
-              </p>
-            )}
           </div>
 
           <div className="flex gap-2">
@@ -233,43 +211,62 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
       <div className="p-4 border rounded-md shadow-sm bg-red-50 border-red-300">
         <h3 className="text-lg font-semibold text-red-900 mb-2">Delete Task?</h3>
         <p className="text-sm text-gray-700 mb-4">
-          Are you sure you want to delete "{task.title}"? This action cannot be undone.
+          Are you sure you want to delete &quot;{task.title}&quot;? This action cannot be undone.
         </p>
         <div className="flex gap-2">
-          <Button variant="danger" size="sm" onClick={handleConfirmDelete}>
-            Delete
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCancelDelete}>
-            Cancel
-          </Button>
+          <Button variant="danger" size="sm" onClick={handleConfirmDelete}>Delete</Button>
+          <Button variant="outline" size="sm" onClick={handleCancelDelete}>Cancel</Button>
         </div>
       </div>
     );
   }
 
-  // Helper function to get priority badge styles
+  // Priority badge styles
   const getPriorityBadge = (priority: TaskPriority) => {
     const styles = {
-      low: { bg: 'bg-green-100', text: 'text-green-800', icon: '🟢', label: 'Low' },
-      medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: '🟡', label: 'Medium' },
-      high: { bg: 'bg-red-100', text: 'text-red-800', icon: '🔴', label: 'High' }
+      low: { bg: 'bg-green-100', text: 'text-green-800', label: 'Low' },
+      medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
+      high: { bg: 'bg-red-100', text: 'text-red-800', label: 'High' }
     };
     return styles[priority] || styles.medium;
   };
 
+  const recurringLabels: Record<RecurringType, string> = {
+    none: '',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+  };
+
   const priorityBadge = getPriorityBadge(task.priority);
+  const dueDate = formatDueDate(task.due_date);
+  const overdue = isOverdue(task.due_date);
 
   // Render normal view mode
   return (
     <div className={`p-4 border rounded-md shadow-sm transition-colors ${isComplete ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} task-item ${isComplete ? 'task-complete' : ''}`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex-grow">
-          <div className="flex items-center gap-2 mb-2">
+          {/* Badges row */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityBadge.bg} ${priorityBadge.text}`}>
-              <span className="mr-1">{priorityBadge.icon}</span>
               {priorityBadge.label}
             </span>
+            {task.recurring && task.recurring !== 'none' && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                {recurringLabels[task.recurring]}
+              </span>
+            )}
+            {dueDate && (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                overdue ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+              }`}>
+                {overdue ? 'Overdue: ' : 'Due: '}{dueDate}
+              </span>
+            )}
           </div>
+
           <h3 className={`text-lg font-medium ${isComplete ? 'line-through text-gray-500' : 'text-gray-900'}`}>
             {task.title}
           </h3>
@@ -278,8 +275,22 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
               {task.description}
             </p>
           )}
+
+          {/* Tags */}
+          {task.tags && task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {task.tags.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        {/* Wrap checkbox in a label for increased touch target */}
+
         <label className="flex items-center justify-center p-2 -mr-2 cursor-pointer">
           <input
             type="checkbox"
@@ -293,12 +304,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onTaskUpdated, onTaskD
 
       {/* Action buttons */}
       <div className="flex gap-2 mb-2">
-        <Button variant="outline" size="sm" onClick={handleEdit} aria-label="Edit task">
-          Edit
-        </Button>
-        <Button variant="danger" size="sm" onClick={handleDeleteClick} aria-label="Delete task">
-          Delete
-        </Button>
+        <Button variant="outline" size="sm" onClick={handleEdit} aria-label="Edit task">Edit</Button>
+        <Button variant="danger" size="sm" onClick={handleDeleteClick} aria-label="Delete task">Delete</Button>
       </div>
 
       <div className="flex justify-between text-xs text-gray-400">

@@ -1,0 +1,81 @@
+# Redpanda (Kafka-compatible) single-node deployment for local Minikube
+# Lightweight alternative to full Kafka cluster - no Zookeeper needed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda
+  namespace: kafka
+  labels:
+    app: redpanda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: docker.redpanda.com/redpandadata/redpanda:latest
+          args:
+            - redpanda
+            - start
+            - --smp=1
+            - --memory=512M
+            - --overprovisioned
+            - --node-id=0
+            - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+            - --advertise-kafka-addr=PLAINTEXT://redpanda.kafka.svc.cluster.local:9092
+            - --pandaproxy-addr=0.0.0.0:8082
+            - --advertise-pandaproxy-addr=redpanda.kafka.svc.cluster.local:8082
+          ports:
+            - name: kafka
+              containerPort: 9092
+            - name: admin
+              containerPort: 9644
+            - name: proxy
+              containerPort: 8082
+          resources:
+            limits:
+              cpu: 500m
+              memory: 768Mi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /v1/status/ready
+              port: admin
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: kafka
+  labels:
+    app: redpanda
+spec:
+  type: ClusterIP
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: kafka
+    - name: admin
+      port: 9644
+      targetPort: admin
+    - name: proxy
+      port: 8082
+      targetPort: proxy
+  selector:
+    app: redpanda

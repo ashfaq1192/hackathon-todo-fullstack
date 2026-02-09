@@ -141,3 +141,66 @@ def test_timestamps_auto_generate():
 
     # Initially, created_at and updated_at should be very close
     assert abs((task.created_at - task.updated_at).total_seconds()) < 1
+
+
+def test_recurring_type_enum():
+    """
+    Test RecurringType enum has correct values.
+    """
+    from src.models.task import RecurringType
+
+    assert RecurringType.none == "none"
+    assert RecurringType.daily == "daily"
+    assert RecurringType.weekly == "weekly"
+    assert RecurringType.monthly == "monthly"
+    assert RecurringType.yearly == "yearly"
+
+
+def test_recurring_defaults_to_none():
+    """
+    Test that recurring defaults to 'none' for new tasks.
+    """
+    from src.models.task import RecurringType, Task
+
+    task = Task(user_id="user_123", title="Non-recurring task")
+    assert task.recurring == RecurringType.none
+
+
+def test_due_date_defaults_to_none():
+    """
+    Test that due_date defaults to None for new tasks.
+    """
+    from src.models.task import Task
+
+    task = Task(user_id="user_123", title="Task without deadline")
+    assert task.due_date is None
+
+
+def test_tags_defaults_to_empty_list():
+    """
+    Test that tags defaults to an empty list for new tasks.
+    """
+    from src.models.task import Task
+
+    task = Task(user_id="user_123", title="Task without tags")
+    assert task.tags == []
+
+
+def test_task_with_all_new_fields():
+    """
+    Test creating a task with all new fields (due_date, recurring, tags).
+    """
+    from src.models.task import RecurringType, Task
+
+    due = datetime(2026, 3, 15, 10, 0, 0)
+    task = Task(
+        user_id="user_123",
+        title="Weekly standup",
+        due_date=due,
+        recurring=RecurringType.weekly,
+        tags=["work", "meeting"],
+    )
+
+    assert task.due_date == due
+    assert task.recurring == RecurringType.weekly
+    assert task.tags == ["work", "meeting"]

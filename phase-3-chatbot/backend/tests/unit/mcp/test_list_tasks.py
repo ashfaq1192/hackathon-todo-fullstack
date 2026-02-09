@@ -281,3 +281,57 @@ def test_list_tasks_priority_values(session):
     assert "low" in priorities
     assert "medium" in priorities
     assert "high" in priorities
+
+
+def test_list_tasks_includes_new_fields(session):
+    """Test that new fields (due_date, recurring, tags) are in task output."""
+    from datetime import datetime
+    from src.models.task import RecurringType
+
+    task = Task(
+        user_id="test_user",
+        title="Advanced task",
+        due_date=datetime(2026, 3, 15, 10, 0, 0),
+        recurring=RecurringType.weekly,
+        tags=["work", "review"],
+        complete=False,
+        priority=TaskPriority.high,
+    )
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+
+    result = list_tasks(user_id="test_user", status="all", db=session)
+
+    assert result["success"] is True
+    assert result["count"] == 1
+
+    task_data = result["tasks"][0]
+    assert "due_date" in task_data
+    assert task_data["due_date"] != ""
+    assert task_data["recurring"] == "weekly"
+    assert task_data["tags"] == ["work", "review"]
+
+    # Verify message includes new field info
+    assert "Due:" in result["message"]
+    assert "Recurring: weekly" in result["message"]
+    assert "Tags:" in result["message"]
+
+
+def test_list_tasks_default_new_fields(session):
+    """Test that tasks without new fields show correct defaults."""
+    task = Task(
+        user_id="test_user",
+        title="Simple task",
+        complete=False,
+        priority=TaskPriority.medium,
+    )
+    session.add(task)
+    session.commit()
+
+    result = list_tasks(user_id="test_user", status="all", db=session)
+
+    task_data = result["tasks"][0]
+    assert task_data["due_date"] == ""
+    assert task_data["recurring"] == "none"
+    assert task_data["tags"] == []

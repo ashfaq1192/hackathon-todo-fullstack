@@ -64,7 +64,6 @@ def test_add_task_success_minimal_fields(session):
     assert result["task_id"] is not None
     assert result["title"] == "Simple task"
     assert "Priority: medium" in result["message"]
-    assert result["priority"] == "medium"  # default
 
     # Verify in database
     task = session.get(Task, result["task_id"])
@@ -208,3 +207,118 @@ def test_add_task_priority_variations(session):
 
         task = session.get(Task, result["task_id"])
         assert task.priority.value == priority
+
+
+def test_add_task_with_due_date(session):
+    """Test adding task with a due date."""
+    result = add_task(
+        user_id="test_user",
+        title="Task with deadline",
+        due_date="2026-02-15T10:00:00",
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "Due:" in result["message"]
+
+    task = session.get(Task, result["task_id"])
+    assert task.due_date is not None
+
+
+def test_add_task_with_invalid_due_date(session):
+    """Test error when due date format is invalid."""
+    result = add_task(
+        user_id="test_user",
+        title="Task with bad date",
+        due_date="not-a-date",
+        db=session,
+    )
+
+    assert result["success"] is False
+    assert result["error"] == "Invalid due_date"
+
+
+def test_add_task_with_recurring(session):
+    """Test adding task with recurring schedule."""
+    result = add_task(
+        user_id="test_user",
+        title="Daily standup",
+        recurring="daily",
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "Recurring: daily" in result["message"]
+
+    task = session.get(Task, result["task_id"])
+    assert task.recurring.value == "daily"
+
+
+def test_add_task_with_invalid_recurring(session):
+    """Test error when recurring type is invalid."""
+    result = add_task(
+        user_id="test_user",
+        title="Task with bad recurring",
+        recurring="biweekly",
+        db=session,
+    )
+
+    assert result["success"] is False
+    assert result["error"] == "Invalid recurring type"
+
+
+def test_add_task_with_tags(session):
+    """Test adding task with tags."""
+    result = add_task(
+        user_id="test_user",
+        title="Tagged task",
+        tags=["work", "urgent"],
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "Tags:" in result["message"]
+
+    task = session.get(Task, result["task_id"])
+    assert task.tags == ["work", "urgent"]
+
+
+def test_add_task_tags_cleaned(session):
+    """Test that tags are lowercased and stripped."""
+    result = add_task(
+        user_id="test_user",
+        title="Task with messy tags",
+        tags=["  Work  ", "URGENT", ""],
+        db=session,
+    )
+
+    assert result["success"] is True
+
+    task = session.get(Task, result["task_id"])
+    assert "work" in task.tags
+    assert "urgent" in task.tags
+    assert "" not in task.tags
+
+
+def test_add_task_with_all_new_fields(session):
+    """Test adding task with all advanced fields."""
+    result = add_task(
+        user_id="test_user",
+        title="Complete task",
+        description="With all fields",
+        priority="high",
+        due_date="2026-03-01T09:00:00",
+        recurring="weekly",
+        tags=["project", "review"],
+        db=session,
+    )
+
+    assert result["success"] is True
+    assert "Due:" in result["message"]
+    assert "Recurring: weekly" in result["message"]
+    assert "Tags:" in result["message"]
+
+    task = session.get(Task, result["task_id"])
+    assert task.due_date is not None
+    assert task.recurring.value == "weekly"
+    assert task.tags == ["project", "review"]

@@ -1,5 +1,4 @@
 # Backend Deployment
-# TODO: Complete with SDD workflow
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +15,13 @@ spec:
     metadata:
       labels:
         {{- include "todo-chatbot.backend.selectorLabels" . | nindent 8 }}
+      {{- if .Values.dapr.enabled }}
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "backend"
+        dapr.io/app-port: "8000"
+        dapr.io/enable-api-logging: "true"
+      {{- end }}
     spec:
       containers:
         - name: backend
@@ -39,6 +45,11 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+          env:
+            {{- if .Values.dapr.enabled }}
+            - name: DAPR_ENABLED
+              value: "true"
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "todo-chatbot.fullname" . }}-config

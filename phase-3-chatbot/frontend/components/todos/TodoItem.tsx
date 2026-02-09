@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import type { Task, TaskPatch, TaskPriority } from '@/types/task';
+import type { Task, TaskPatch, TaskPriority, RecurringType } from '@/types/task';
 
 // Helper function to get priority badge styles
 const getPriorityBadge = (priority: TaskPriority) => {
@@ -192,8 +192,8 @@ export function TodoItem({ todo, taskNumber, onUpdate, onDelete, isUpdating = fa
 
             {/* Todo Content */}
             <div className="flex-1 min-w-0">
-              {/* Task ID and Priority Badges */}
-              <div className="mb-2 flex items-center gap-2">
+              {/* Task ID, Priority, Recurring, and Due Date Badges */}
+              <div className="mb-2 flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm">
                   <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
@@ -209,6 +209,21 @@ export function TodoItem({ todo, taskNumber, onUpdate, onDelete, isUpdating = fa
                     </span>
                   );
                 })()}
+                {todo.recurring && todo.recurring !== 'none' && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    🔄 {todo.recurring.charAt(0).toUpperCase() + todo.recurring.slice(1)}
+                  </span>
+                )}
+                {todo.due_date && (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    !todo.complete && new Date(todo.due_date) < new Date()
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {!todo.complete && new Date(todo.due_date) < new Date() ? '⚠️ Overdue: ' : '📅 Due: '}
+                    {new Date(todo.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </div>
 
               <h3 className={`text-lg font-semibold ${todo.complete ? 'line-through text-gray-500' : 'text-gray-900'}`}>
@@ -218,6 +233,20 @@ export function TodoItem({ todo, taskNumber, onUpdate, onDelete, isUpdating = fa
                 <p className={`mt-2 text-sm leading-relaxed ${todo.complete ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
                   {todo.description}
                 </p>
+              )}
+
+              {/* Tags */}
+              {todo.tags && todo.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {todo.tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
 
               {/* Completion Confirmation */}

@@ -120,3 +120,29 @@ configMap:
 secrets:
   create: true
   # Values should be set in values-minikube.yaml or via --set
+
+# Dapr configuration (disabled by default, enable via values-dapr.yaml)
+dapr:
+  enabled: false
+
+# Consumer microservices (only deployed when dapr.enabled=true)
+notificationService:
+  replicaCount: 1
+  image:
+    repository: todo-notification
+    tag: latest
+    pullPolicy: Never
+
+recurringTaskService:
+  replicaCount: 1
+  image:
+    repository: todo-recurring
+    tag: latest
+    pullPolicy: Never
+
+auditService:
+  replicaCount: 1
+  image:
+    repository: todo-audit
+    tag: latest
+    pullPolicy: Never

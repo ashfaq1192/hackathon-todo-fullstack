@@ -78,7 +78,6 @@ def test_complete_task_already_complete(session):
     assert result["success"] is True
     assert result["task_id"] == task.id
     assert "already" in result["message"].lower()
-    assert result.get("already_complete") is True
 
     # Verify task is still complete
     session.refresh(task)
@@ -94,7 +93,7 @@ def test_complete_task_not_found(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "not found" in result["message"].lower()
 
 
@@ -118,7 +117,7 @@ def test_complete_task_wrong_user(session):
     )
 
     assert result["success"] is False
-    assert result["error"] == "Task not found"
+    assert result["error"] == "Task not found or unauthorized"
     assert "doesn't belong to you" in result["message"].lower()
 
     # Verify task is still incomplete

@@ -10,7 +10,7 @@ from typing import Literal
 
 from sqlmodel import Session, select
 
-from src.models.task import Task
+from src.models.task import Task, RecurringType
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,6 @@ def list_tasks(
 ) -> dict:
     """List tasks for the user with optional status filtering.
 
-    This MCP tool retrieves tasks from the database and formats them for
-    display. It's designed to be called by the Swarm Agent when the user
-    requests to see their tasks (e.g., "Show me my pending tasks").
-
     Args:
         user_id: User ID from authenticated JWT token
         status: Filter by status (all/pending/completed, default: all)
@@ -33,21 +29,7 @@ def list_tasks(
 
     Returns:
         dict: Result with success status and task list
-            {
-                "success": bool,
-                "tasks": list[dict],  # List of task objects
-                "count": int,
-                "message": str
-            }
-
-    Example:
-        >>> result = list_tasks(
-        ...     user_id="user_123",
-        ...     status="pending"
-        ... )
-        >>> # Returns: {"success": True, "tasks": [...], "count": 5, ...}
     """
-    # T060: Log MCP tool invocation
     logger.info(f"list_tasks invoked: user_id={user_id}, status={status}")
 
     if not db:
@@ -68,31 +50,39 @@ def list_tasks(
             statement = statement.where(Task.complete == False)  # noqa: E712
         elif status == "completed":
             statement = statement.where(Task.complete == True)  # noqa: E712
-        # "all" status includes both completed and pending
 
-        # Execute query and get results
         tasks = db.exec(statement).all()
 
-        # Format tasks for response
-        # Note: Gemini API doesn't handle null values, so we use empty string for optional fields
+        # Format tasks for response with new fields
         task_list = []
         for task in tasks:
-            task_list.append({
+            task_dict = {
                 "id": task.id,
                 "title": task.title,
-                "description": task.description or "",  # Convert None to empty string for Gemini
+                "description": task.description or "",
                 "complete": task.complete,
                 "priority": task.priority.value,
                 "created_at": task.created_at.isoformat(),
-            })
+            }
+            # Add new fields
+            if task.due_date:
+                task_dict["due_date"] = task.due_date.isoformat()
+            else:
+                task_dict["due_date"] = ""
+            if task.recurring and task.recurring != RecurringType.none:
+                task_dict["recurring"] = task.recurring.value
+            else:
+                task_dict["recurring"] = "none"
+            task_dict["tags"] = task.tags if task.tags else []
 
-        # Generate formatted response for Gemini API compatibility
+            task_list.append(task_dict)
+
         logger.info(f"list_tasks success: user_id={user_id}, count={len(task_list)}")
 
         if len(task_list) == 0:
             message = ""
             if status == "pending":
-                message = "You have no pending tasks. Great job! 🎉"
+                message = "You have no pending tasks. Great job!"
             elif status == "completed":
                 message = "You have no completed tasks yet."
             else:
@@ -107,8 +97,15 @@ def list_tasks(
         # Format tasks as readable string
         lines = [f"Found {len(task_list)} task{'s' if len(task_list) != 1 else ''}:"]
         for task in task_list:
-            status_emoji = "✅" if task["complete"] else "⏳"
-            lines.append(f"  {status_emoji} [{task['id']}] {task['title']} ({task['priority']})")
+            status_emoji = "done" if task["complete"] else "pending"
+            line = f"  [{status_emoji}] [{task['id']}] {task['title']} ({task['priority']})"
+            if task.get("due_date"):
+                line += f" | Due: {task['due_date'][:10]}"
+            if task.get("recurring") and task["recurring"] != "none":
+                line += f" | Recurring: {task['recurring']}"
+            if task.get("tags"):
+                line += f" | Tags: {', '.join(task['tags'])}"
+            lines.append(line)
 
         return {
             "success": True,

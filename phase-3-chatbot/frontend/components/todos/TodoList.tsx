@@ -15,17 +15,22 @@ interface TodoListProps {}
 
 type FilterType = 'all' | 'active' | 'completed';
 type PriorityFilterType = 'all' | 'low' | 'medium' | 'high';
+type SortByType = 'created_at' | 'due_date' | 'priority' | 'title';
+type SortOrderType = 'asc' | 'desc';
 
 export function TodoList({}: TodoListProps) {
   const { tasks, isLoading, error, updateTask, deleteTask, fetchTasks } = useTaskContext();
   const [filter, setFilter] = useState<FilterType>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [sortBy, setSortBy] = useState<SortByType>('created_at');
+  const [sortOrder, setSortOrder] = useState<SortOrderType>('desc');
 
   // Create todos alias for tasks
   const todos = tasks || [];
 
-  // Filter todos based on selected filter, priority filter, and search query
+  // Filter todos based on selected filter, priority filter, tag filter, and search query
   const filteredTodos = todos.filter((todo) => {
     // Filter by status
     if (filter === 'active' && todo.complete) return false;
@@ -33,6 +38,15 @@ export function TodoList({}: TodoListProps) {
 
     // Filter by priority
     if (priorityFilter !== 'all' && todo.priority !== priorityFilter) return false;
+
+    // Filter by tags
+    if (tagFilter.trim()) {
+      const filterTags = tagFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      if (filterTags.length > 0) {
+        const taskTags = (todo.tags || []).map(t => t.toLowerCase());
+        if (!filterTags.some(ft => taskTags.includes(ft))) return false;
+      }
+    }
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -47,6 +61,29 @@ export function TodoList({}: TodoListProps) {
     }
 
     return true;
+  }).sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case 'title':
+        cmp = a.title.localeCompare(b.title);
+        break;
+      case 'priority': {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        cmp = (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0);
+        break;
+      }
+      case 'due_date': {
+        const aDate = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+        const bDate = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+        cmp = aDate - bDate;
+        break;
+      }
+      case 'created_at':
+      default:
+        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+    }
+    return sortOrder === 'asc' ? cmp : -cmp;
   });
 
   // Stats
@@ -160,7 +197,7 @@ export function TodoList({}: TodoListProps) {
                   : 'text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🟢 Low
+              Low
               <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
                 priorityFilter === 'low' ? 'bg-white/20' : 'bg-gray-300'
               }`}>
@@ -175,7 +212,7 @@ export function TodoList({}: TodoListProps) {
                   : 'text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🟡 Medium
+              Medium
               <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
                 priorityFilter === 'medium' ? 'bg-white/20' : 'bg-gray-300'
               }`}>
@@ -190,12 +227,44 @@ export function TodoList({}: TodoListProps) {
                   : 'text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🔴 High
+              High
               <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
                 priorityFilter === 'high' ? 'bg-white/20' : 'bg-gray-300'
               }`}>
                 {highCount}
               </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tag Filter and Sort Controls */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <input
+            type="text"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            placeholder="Filter by tags (comma-separated)"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[200px]"
+          />
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortByType)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="created_at">Date Created</option>
+              <option value="due_date">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="title">Title</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-colors"
+              title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortOrder === 'asc' ? '↑ Asc' : '↓ Desc'}
             </button>
           </div>
         </div>

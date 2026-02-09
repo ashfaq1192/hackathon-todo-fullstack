@@ -7,7 +7,7 @@ Tests validation rules for API request/response schemas.
 import pytest
 from pydantic import ValidationError
 
-from src.schemas.task import TaskCreate, TaskPatch, TaskResponse, TaskUpdate
+from src.schemas.task import TaskCreate, TaskPatch, TaskQueryParams, TaskResponse, TaskUpdate
 
 
 def test_task_create_with_valid_data():
@@ -87,17 +87,18 @@ def test_task_create_description_max_length():
 
 def test_task_update_requires_all_fields():
     """
-    Verify TaskUpdate requires all fields (title, description, complete).
+    Verify TaskUpdate requires all fields (title, description, complete, priority).
     """
-    # Valid with all fields
-    task = TaskUpdate(title="Updated Task", description="Updated Desc", complete=True)
+    # Valid with all required fields
+    task = TaskUpdate(title="Updated Task", description="Updated Desc", complete=True, priority="high")
     assert task.title == "Updated Task"
     assert task.description == "Updated Desc"
     assert task.complete is True
+    assert task.priority.value == "high"
 
     # Invalid without complete field
     with pytest.raises(ValidationError) as exc_info:
-        TaskUpdate(title="Task", description="Desc")
+        TaskUpdate(title="Task", description="Desc", priority="medium")
 
     errors = exc_info.value.errors()
     assert any(error["loc"] == ("complete",) for error in errors)
@@ -167,6 +168,11 @@ def test_task_response_from_dict():
         "title": "Test Task",
         "description": "Test Description",
         "complete": False,
+        "priority": "medium",
+        "due_date": None,
+        "recurring": "none",
+        "recurring_end_date": None,
+        "tags": [],
         "created_at": "2025-12-20T10:30:00",
         "updated_at": "2025-12-20T10:30:00",
     }
@@ -176,3 +182,83 @@ def test_task_response_from_dict():
     assert task.user_id == "user123"
     assert task.title == "Test Task"
     assert task.complete is False
+    assert task.tags == []
+    assert task.recurring.value == "none"
+
+
+def test_task_create_with_advanced_fields():
+    """
+    Verify TaskCreate accepts due_date, recurring, and tags.
+    """
+    task = TaskCreate(
+        title="Weekly meeting",
+        due_date="2026-02-15T10:00:00",
+        recurring="weekly",
+        tags=["work", "meeting"],
+    )
+    assert task.title == "Weekly meeting"
+    assert task.due_date is not None
+    assert task.recurring.value == "weekly"
+    assert task.tags == ["work", "meeting"]
+
+
+def test_task_create_defaults_for_advanced_fields():
+    """
+    Verify TaskCreate defaults: due_date=None, recurring=none, tags=[].
+    """
+    task = TaskCreate(title="Simple task")
+    assert task.due_date is None
+    assert task.recurring.value == "none"
+    assert task.tags == []
+
+
+def test_task_patch_with_advanced_fields():
+    """
+    Verify TaskPatch allows partial updates of new fields.
+    """
+    # Only tags
+    patch1 = TaskPatch(tags=["urgent"])
+    assert patch1.tags == ["urgent"]
+    assert patch1.due_date is None
+    assert patch1.recurring is None
+
+    # Only recurring
+    patch2 = TaskPatch(recurring="daily")
+    assert patch2.recurring.value == "daily"
+
+    # Only due_date
+    patch3 = TaskPatch(due_date="2026-03-01T09:00:00")
+    assert patch3.due_date is not None
+
+
+def test_task_query_params_defaults():
+    """
+    Verify TaskQueryParams has correct defaults.
+    """
+    params = TaskQueryParams()
+    assert params.search is None
+    assert params.status is None
+    assert params.priority is None
+    assert params.tags is None
+    assert params.sort_by == "created_at"
+    assert params.sort_order == "desc"
+
+
+def test_task_query_params_with_values():
+    """
+    Verify TaskQueryParams accepts all filter values.
+    """
+    params = TaskQueryParams(
+        search="groceries",
+        status="pending",
+        priority="high",
+        tags=["work"],
+        sort_by="due_date",
+        sort_order="asc",
+    )
+    assert params.search == "groceries"
+    assert params.status == "pending"
+    assert params.priority.value == "high"
+    assert params.tags == ["work"]
+    assert params.sort_by == "due_date"
+    assert params.sort_order == "asc"

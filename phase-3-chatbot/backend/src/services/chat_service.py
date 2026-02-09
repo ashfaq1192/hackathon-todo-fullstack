@@ -79,18 +79,35 @@ class ChatService:
 
         # Create wrapper functions with user_id pre-bound
         # These wrappers also capture tool results for fallback when Gemini fails
-        def add_task_wrapper(title: str, description: str = "", priority: str = "medium"):
-            """Add a new task for the authenticated user."""
+        def add_task_wrapper(
+            title: str,
+            description: str = "",
+            priority: str = "medium",
+            due_date: str = "",
+            recurring: str = "none",
+            tags: str = "",
+        ):
+            """Add a new task for the authenticated user. Supports due dates, recurring schedules, and tags."""
             global _last_tool_result
             kwargs = {"user_id": user_id, "title": title, "priority": priority, "db": db}
             if description:
                 kwargs["description"] = description
+            if due_date:
+                kwargs["due_date"] = due_date
+            if recurring and recurring != "none":
+                kwargs["recurring"] = recurring
+            if tags:
+                # Handle tags as comma-separated string or list
+                if isinstance(tags, str):
+                    kwargs["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
+                elif isinstance(tags, list):
+                    kwargs["tags"] = tags
             result = add_task(**kwargs)
             _last_tool_result = result
             return result
 
         def list_tasks_wrapper(status: str = "all"):
-            """List tasks for the authenticated user. Returns task list with IDs."""
+            """List tasks for the authenticated user. Returns task list with IDs, due dates, recurring info, and tags."""
             global _last_tool_result
             result = list_tasks(user_id=user_id, status=status, db=db)
             _last_tool_result = result
@@ -103,8 +120,16 @@ class ChatService:
             _last_tool_result = result
             return result
 
-        def update_task_wrapper(task_id: int, title: str = "", description: str = "", priority: str = ""):
-            """Update a task for the authenticated user."""
+        def update_task_wrapper(
+            task_id: int,
+            title: str = "",
+            description: str = "",
+            priority: str = "",
+            due_date: str = "",
+            recurring: str = "",
+            tags: str = "",
+        ):
+            """Update a task for the authenticated user. Supports due_date, recurring, and tags."""
             global _last_tool_result
             kwargs = {"user_id": user_id, "task_id": task_id, "db": db}
             if title:
@@ -113,6 +138,15 @@ class ChatService:
                 kwargs["description"] = description
             if priority:
                 kwargs["priority"] = priority
+            if due_date:
+                kwargs["due_date"] = due_date
+            if recurring:
+                kwargs["recurring"] = recurring
+            if tags:
+                if isinstance(tags, str):
+                    kwargs["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
+                elif isinstance(tags, list):
+                    kwargs["tags"] = tags
             result = update_task(**kwargs)
             _last_tool_result = result
             return result
@@ -139,45 +173,38 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
 - **IMPORTANT**: Auto-detect the user's language (English or Urdu) and respond in the SAME language
 - Use the provided tools to perform task operations
 - Always confirm actions clearly with friendly, concise responses
-- Use emojis appropriately to make interactions engaging (✅ ❌ 📝 🗑️ etc.)
 
 **CRITICAL - Task ID Handling**:
 - Tasks have unique database IDs (like 15, 27, 42, etc.)
 - When user says "task #1" or "task 1", they might mean the FIRST task in their list, NOT database ID 1
 - ALWAYS call list_tasks_wrapper() FIRST to see the actual task IDs before completing/updating/deleting
 - Show users their tasks with IDs so they know which ID to use
-- Example: If user says "complete task 1", first list tasks to find the correct ID
+
+**Advanced Features (Phase V)**:
+- **Due Dates**: Users can set deadlines. Pass due_date as ISO 8601 (e.g., "2026-02-15T10:00:00").
+  When user says "tomorrow", "next Monday", "in 3 days", calculate the correct date.
+- **Recurring Tasks**: Set recurring=daily/weekly/monthly/yearly for repeating tasks.
+  Example: "Add a weekly team meeting task" -> recurring="weekly"
+- **Tags/Categories**: Add tags like "work", "personal", "home" for organization.
+  Pass as comma-separated string: tags="work,urgent"
 
 **Multi-Language Support (Phase III - Urdu +100 Bonus)**:
-- Detect if user writes in Urdu script (e.g., "ایک کام شامل کریں")
+- Detect if user writes in Urdu script
 - Respond fully in Urdu when user writes in Urdu
-- Common Urdu task commands to recognize:
-  - "کام شامل کریں" / "نیا کام بنائیں" = Add task
-  - "کام دکھائیں" / "میرے کام" = Show tasks
-  - "کام مکمل کریں" = Complete task
-  - "کام تبدیل کریں" / "کام اپڈیٹ کریں" = Update task
-  - "کام حذف کریں" / "کام ہٹائیں" = Delete task
-- Example Urdu responses:
-  - "✅ کام 'دودھ خریدنا' کامیابی سے شامل ہو گیا!"
-  - "📋 آپ کے کام:"
-  - "✅ کام مکمل ہو گیا!"
+- Common Urdu commands: "کام شامل کریں" (add), "کام دکھائیں" (show), "کام مکمل کریں" (complete)
 
-**Tool Usage** (user_id is automatically provided - just call with required params):
-- add_task_wrapper(title, description?, priority?): Create new tasks
-- list_tasks_wrapper(status?): Show tasks (status: all/pending/completed) - CALL THIS FIRST to get task IDs
+**Tool Usage** (user_id is automatically provided):
+- add_task_wrapper(title, description?, priority?, due_date?, recurring?, tags?): Create new tasks with optional due date, recurring schedule, and tags
+- list_tasks_wrapper(status?): Show tasks (all/pending/completed) - includes due dates, recurring info, and tags
 - complete_task_wrapper(task_id): Mark task as complete (use actual database ID from list)
-- update_task_wrapper(task_id, title?, description?, priority?): Update task
+- update_task_wrapper(task_id, title?, description?, priority?, due_date?, recurring?, tags?): Update task fields
 - delete_task_wrapper(task_id): Delete task
 
 **Response Style**:
 - Be concise and friendly
-- Match the user's language in your response
-- When listing tasks, format them clearly in markdown with IDs visible:
-  📋 **Your Tasks:**
-  - ⏳ [ID: 15] Buy groceries (medium)
-  - ✅ [ID: 27] Call mom (high) - Completed
+- Match the user's language
+- When listing tasks, show due dates, recurring status, and tags
 - Confirm what you did after using a tool
-- If something fails, explain why and suggest alternatives
 - NEVER reveal internal error messages or database details""",
             functions=[
                 add_task_wrapper,       # Phase 3, User Story 1 (T015)
@@ -388,7 +415,18 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
                 title = task.get("title", "Untitled")
                 task_id = task.get("id", "?")
                 completed_text = " - Completed" if task.get("complete") else ""
-                lines.append(f"- {status_emoji} **[ID: {task_id}]** {title} ({priority}){completed_text}")
+                line = f"- {status_emoji} **[ID: {task_id}]** {title} ({priority}){completed_text}"
+                # Show due date if present
+                if task.get("due_date"):
+                    line += f" | Due: {task['due_date'][:10]}"
+                # Show recurring if not none
+                if task.get("recurring") and task["recurring"] != "none":
+                    line += f" | 🔄 {task['recurring']}"
+                # Show tags if present
+                if task.get("tags"):
+                    tag_pills = " ".join([f"`{t}`" for t in task["tags"]])
+                    line += f" | {tag_pills}"
+                lines.append(line)
             tool_message = "\n".join(lines)
 
         if tool_message:
@@ -592,19 +630,11 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
         return None
 
     def _extract_add_task_params(self, message: str) -> tuple[str, str | None]:
-        """Extract task title and priority from add task message.
-
-        Handles patterns like:
-        - "add a new task with title 'Call to Mom' with priority High"
-        - "add task: Buy groceries"
-        - "create a task called 'Finish report' priority low"
-        - "add task Buy milk"
-
-        Args:
-            message: User's message
+        """Extract task title, priority, due_date, recurring, and tags from add task message.
 
         Returns:
             tuple: (title, priority) where priority may be None
+            Note: due_date, recurring, tags are returned via the params dict in _detect_intent
         """
         msg_lower = message.lower()
         title = None
@@ -616,8 +646,6 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
             priority = priority_match.group(1)
 
         # Try to extract title from various patterns
-
-        # Pattern 1: "with title 'X'" or "title 'X'" or "titled 'X'" or "called 'X'"
         title_patterns = [
             r"(?:with\s+)?title\s+[\"']([^\"']+)[\"']",
             r"(?:with\s+)?title\s+[\"']?([^\"']+?)[\"']?\s*(?:with\s+priority|priority|$)",
@@ -630,22 +658,19 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
                 title = match.group(1).strip()
                 break
 
-        # Pattern 2: Quoted text anywhere (fallback)
         if not title:
             quoted_match = re.search(r'[\"\'](.*?)["\']', message)
             if quoted_match:
                 title = quoted_match.group(1).strip()
 
-        # Pattern 3: After colon - "add task: Buy groceries"
         if not title:
-            colon_match = re.search(r'task\s*:\s*(.+?)(?:\s+(?:with\s+)?priority|\s*$)', message, re.IGNORECASE)
+            colon_match = re.search(r'task\s*:\s*(.+?)(?:\s+(?:with\s+)?priority|\s+(?:with\s+)?(?:due|tag|recurring)|\s*$)', message, re.IGNORECASE)
             if colon_match:
                 title = colon_match.group(1).strip().strip('"\'')
 
-        # Pattern 4: Simple extraction - remove common prefixes
         if not title:
             prefixes = [
-                r"add\s+(?:a\s+)?(?:new\s+)?task\s+(?:to\s+)?",
+                r"add\s+(?:a\s+)?(?:new\s+)?(?:daily|weekly|monthly|yearly\s+)?task\s+(?:to\s+)?",
                 r"create\s+(?:a\s+)?(?:new\s+)?task\s+(?:to\s+)?",
                 r"new\s+task\s*:?\s*",
                 r"remind\s+me\s+to\s+",
@@ -653,8 +678,11 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
             title = message
             for prefix in prefixes:
                 title = re.sub(prefix, "", title, flags=re.IGNORECASE)
-            # Remove priority part from title
+            # Remove priority, due date, recurring, tags parts from title
             title = re.sub(r'\s*(?:with\s+)?priority\s+(?:high|medium|low)\s*', '', title, flags=re.IGNORECASE)
+            title = re.sub(r'\s*(?:with\s+)?(?:due\s+(?:date\s+)?|by\s+|before\s+)\S+.*$', '', title, flags=re.IGNORECASE)
+            title = re.sub(r'\s*(?:with\s+)?(?:tags?|categories?)\s*:?\s*\S+.*$', '', title, flags=re.IGNORECASE)
+            title = re.sub(r'\s*(?:recurring|repeat(?:ing)?)\s+(?:daily|weekly|monthly|yearly)\s*', '', title, flags=re.IGNORECASE)
             title = title.strip().strip('"\'')
 
         return (title if title else "New Task", priority)
@@ -818,7 +846,14 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
             elif intent == "add_task":
                 title = params.get("title", "New Task")
                 priority = params.get("priority", "medium")
-                result = add_task(user_id=user_id, title=title, priority=priority, db=self.db)
+                add_kwargs = {"user_id": user_id, "title": title, "priority": priority, "db": self.db}
+                if params.get("due_date"):
+                    add_kwargs["due_date"] = params["due_date"]
+                if params.get("recurring"):
+                    add_kwargs["recurring"] = params["recurring"]
+                if params.get("tags"):
+                    add_kwargs["tags"] = params["tags"]
+                result = add_task(**add_kwargs)
                 logger.info(f"Fallback add_task executed: title={title}, priority={priority}")
                 return result
 
@@ -834,14 +869,17 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
                 new_title = params.get("title")
                 new_description = params.get("description")
                 new_priority = params.get("priority")
+                new_due_date = params.get("due_date")
+                new_recurring = params.get("recurring")
+                new_tags = params.get("tags")
 
-                if not new_title and not new_description and not new_priority:
+                if not any([new_title, new_description, new_priority, new_due_date, new_recurring, new_tags]):
                     return {
                         "success": False,
                         "message": f"To update task #{task_id}, please tell me what you'd like to change. For example:\n"
                                   f"- 'Update task #{task_id} title to New Title'\n"
                                   f"- 'Change task #{task_id} priority to high'\n"
-                                  f"- 'Set task #{task_id} description to New description'",
+                                  f"- 'Set task #{task_id} due date to 2026-02-15'",
                     }
 
                 # Perform the actual update
@@ -852,9 +890,15 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
                     update_kwargs["description"] = new_description
                 if new_priority:
                     update_kwargs["priority"] = new_priority
+                if new_due_date:
+                    update_kwargs["due_date"] = new_due_date
+                if new_recurring:
+                    update_kwargs["recurring"] = new_recurring
+                if new_tags:
+                    update_kwargs["tags"] = new_tags
 
                 result = update_task(**update_kwargs)
-                logger.info(f"Fallback update_task executed: task_id={task_id}, title={new_title}, desc={new_description}, priority={new_priority}")
+                logger.info(f"Fallback update_task executed: task_id={task_id}")
 
                 # Enhance the success message
                 if result.get("success"):
@@ -865,7 +909,13 @@ DO NOT ask for user_id - it is automatically handled. Just use the tools directl
                         changes.append(f"description to '{new_description}'")
                     if new_priority:
                         changes.append(f"priority to '{new_priority}'")
-                    result["message"] = f"✅ Task #{task_id} updated! Changed {', '.join(changes)}."
+                    if new_due_date:
+                        changes.append(f"due date to '{new_due_date}'")
+                    if new_recurring:
+                        changes.append(f"recurring to '{new_recurring}'")
+                    if new_tags:
+                        changes.append(f"tags to '{new_tags}'")
+                    result["message"] = f"Task #{task_id} updated! Changed {', '.join(changes)}."
 
                 return result
 

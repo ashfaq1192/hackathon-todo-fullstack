@@ -1,106 +1,84 @@
- 🎯 Recommended Migration Workflow
-
-  Here's the optimal sequence for your situation:
-
-  Step 1: Backup Current Work (Current Laptop)
-
-  # Commit all changes
-  git add .
-  git commit -m "Pre-migration: Phase V setup and documentation"
-  git push origin 010-oke-dapr-setup
-
-  # Push Docker images
-  docker tag todo-frontend:v1 <your-username>/todo-frontend:v1-x86
-  docker tag todo-backend:v1 <your-username>/todo-backend:v1-x86
-  docker push <your-username>/todo-frontend:v1-x86
-  docker push <your-username>/todo-backend:v1-x86
-
-  # Backup OCI config
-  cp -r ~/.oci ~/oci-backup
-
-  Step 2: Setup New Laptop
-
-  # Install tools
-  # - Docker Desktop
-  # - Git
-  # - WSL 2 (if Windows)
-  # - OCI CLI (Phase V prerequisite)
-  # - Dapr CLI (Phase V prerequisite)
-  # - kubectl & Helm (already done)
-  # - Node.js 22+
-  # - Python 3.13+
-
-  Step 3: Clone and Configure
-
-  # Clone repository
-  git clone <your-repo-url>
-  cd hackathon-todo-fullstack
-  git checkout 010-oke-dapr-setup
-
-  # Restore OCI config
-  mkdir -p ~/.oci
-  cp -r ~/oci-backup/* ~/.oci/
-  chmod 600 ~/.oci/*
-
-  # Verify
-  oci iam region list
-  kubectl version --client
-  helm version
-
-  Step 4: Rebuild Docker Images (ARM64 for OKE)
-
-  Since OKE uses ARM64, you'll rebuild anyway:
-
-  # Setup multi-arch builder
-  docker buildx create --name multiarch --use
-  docker buildx inspect --bootstrap
-
-  # Build ARM64 images
-  docker buildx build --platform linux/arm64 \
-    -t <your-username>/todo-frontend:v1-arm64 \
-    -f phase-4-k8s/docker/frontend/Dockerfile \
-    --push \
-    phase-3-chatbot/frontend
-
-  docker buildx build --platform linux/arm64 \
-    -t <your-username>/todo-backend:v1-arm64 \
-    -f phase-4-k8s/docker/backend/Dockerfile \
-    --push \
-    phase-3-chatbot/backend
+● Now I have a clear picture of your setup. Here's the Phase V status summary:
 
   ---
-  📝 Additional Benefits of 24GB RAM
+  Current Status: Phase V - Cloud Deployment
 
-  Your new laptop will handle:
-  - ✅ Docker Desktop with multiple containers
-  - ✅ Minikube with Dapr HA mode (12 pods)
-  - ✅ Local development servers (backend + frontend)
-  - ✅ IDE (VS Code) + browser + debugging tools
-  - ✅ OCI kubectl operations smoothly
+  ✅ What's Ready
+  ┌──────────────────────┬──────────────┬─────────┐
+  │         Tool         │    Status    │ Version │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ kubectl              │ ✅ Installed │ v1.34.1 │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ Docker               │ ✅ Installed │ 29.1.3  │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ Docker buildx        │ ✅ Available │ v0.30.1 │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ Git                  │ ✅ Installed │ 2.43.0  │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ Python               │ ✅ Installed │ 3.12.3  │
+  ├──────────────────────┼──────────────┼─────────┤
+  │ Oracle Cloud Account │ ✅ Created   │ -       │
+  └──────────────────────┴──────────────┴─────────┘
+  ❌ Missing Tools
+  ┌──────────┬──────────────────────────────────────┐
+  │   Tool   │             Required For             │
+  ├──────────┼──────────────────────────────────────┤
+  │ Helm     │ Deploying app to Kubernetes          │
+  ├──────────┼──────────────────────────────────────┤
+  │ OCI CLI  │ Creating OKE cluster, kubectl config │
+  ├──────────┼──────────────────────────────────────┤
+  │ Dapr CLI │ Installing Dapr on cluster           │
+  ├──────────┼──────────────────────────────────────┤
+  │ Node.js  │ Frontend development                 │
+  └──────────┴──────────────────────────────────────┘
+  ---
+  Recommended Next Steps
 
-  Current memory pressure you're likely experiencing:
-  - Minikube alone: ~4-6GB
-  - Dapr HA mode: ~2-3GB
-  - Docker Desktop: ~2GB
-  - Development tools: ~2-3GB
-  - Total: 10-14GB minimum
+  I can help you install the missing tools now. Here's what we need to do:
 
-  With 24GB, you'll have comfortable headroom!
+  Step 1: Install Missing CLI Tools (I can do this)
+
+  # 1. Install Helm
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+  # 2. Install OCI CLI
+  bash -c "$(curl -L
+  https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"      
+
+  # 3. Install Dapr CLI
+  wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - |       
+  /bin/bash
+
+  # 4. Install Node.js (via nvm)
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+  nvm install 22
+
+  Step 2: Configure OCI CLI (Needs your Oracle Cloud info)
+
+  After OCI CLI is installed, you'll need to run:
+  oci setup config
+  This requires your User OCID, Tenancy OCID, and Region from Oracle Cloud Console.
+
+  Step 3: Upgrade Oracle Account to "Pay As You Go"
+
+  - Oracle Cloud Console → Billing → Upgrade to Pay As You Go
+  - This keeps Always Free resources but enables OKE cluster creation
+  - No charges for Always Free tier usage
+
+  Step 4: Create OKE Cluster (~15 min provisioning)
+
+  After account upgrade, create the Kubernetes cluster.
 
   ---
-  🚀 Next Steps After Migration
+  Would you like me to start installing the missing tools (Helm, OCI CLI, Dapr CLI)? I can  
+  run the installations now, and then guide you through the OCI CLI configuration once you  
+  have your Oracle Cloud credentials ready.
 
-  1. Verify all tools on new laptop:
-  ./phase-5-cloud-deployment/scripts/verify-prerequisites.sh
-  2. Continue Phase V from where you left off:
-    - Create OKE cluster (Oracle Cloud Always Free)
-    - Install Dapr in HA mode
-    - Deploy ARM64 images
-  3. Reference: Follow phase-5-cloud-deployment/NEXT_STEPS.md (60-75 min total)
+✻ Churned for 2m 59s
 
-  ---
-  Would you like me to help you with any specific step, such as:
-  1. Creating a pre-migration backup script
-  2. Setting up the new laptop after transfer
-  3. Rebuilding Docker images for ARM64
-  4. Creating the OKE cluster once you're on the new machine
+❯ yes, install the missing tools                                                                                             
+● I'll install the missing tools now. Let me run these installations.                           
+● Bash(curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash)
+  ⎿  Running…                                                                                  
+● Bash(wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - |        /bin/bash)
+  ⎿  Waiting…     

@@ -52,6 +52,11 @@ def test_tasks_table_has_required_columns(clean_engine):
         "title",
         "description",
         "complete",
+        "priority",
+        "due_date",
+        "recurring",
+        "recurring_end_date",
+        "tags",
         "created_at",
         "updated_at",
     ]

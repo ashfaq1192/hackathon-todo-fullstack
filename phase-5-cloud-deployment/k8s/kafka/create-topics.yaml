@@ -1,0 +1,46 @@
+# Job to create Kafka topics after Redpanda is running
+# Usage: kubectl apply -f create-topics.yaml (after Redpanda is ready)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-kafka-topics
+  namespace: kafka
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-topics
+          image: docker.redpanda.com/redpandadata/redpanda:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Waiting for Redpanda to be ready..."
+              until rpk cluster info --brokers redpanda.kafka.svc.cluster.local:9092 2>/dev/null; do
+                sleep 2
+              done
+
+              echo "Creating topics..."
+
+              rpk topic create task-events \
+                --brokers redpanda.kafka.svc.cluster.local:9092 \
+                --partitions 3 \
+                --replicas 1 \
+                --topic-config retention.ms=604800000
+
+              rpk topic create reminders \
+                --brokers redpanda.kafka.svc.cluster.local:9092 \
+                --partitions 1 \
+                --replicas 1 \
+                --topic-config retention.ms=86400000
+
+              rpk topic create task-updates \
+                --brokers redpanda.kafka.svc.cluster.local:9092 \
+                --partitions 3 \
+                --replicas 1 \
+                --topic-config retention.ms=3600000
+
+              echo "Topics created:"
+              rpk topic list --brokers redpanda.kafka.svc.cluster.local:9092

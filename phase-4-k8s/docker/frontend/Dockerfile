@@ -11,6 +11,9 @@ WORKDIR /app
 # Install dependencies required for native modules
 RUN apk add --no-cache libc6-compat
 
+# Increase npm timeout for slow networks
+ENV NPM_CONFIG_FETCH_TIMEOUT=600000
+
 # Copy package files
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
 
@@ -40,11 +43,28 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build-time args for public URLs (baked into JS bundle by Next.js)
+# Pass via: docker build --build-arg NEXT_PUBLIC_API_URL=http://YOUR_BACKEND_IP ...
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+ARG BETTER_AUTH_URL=http://localhost:3000
+ARG NEXT_PUBLIC_CHATKIT_API_ENDPOINT=http://localhost:8000/api
+ARG NEXT_PUBLIC_VOICE_INPUT_ENABLED=true
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
+    BETTER_AUTH_URL=$BETTER_AUTH_URL \
+    NEXT_PUBLIC_CHATKIT_API_ENDPOINT=$NEXT_PUBLIC_CHATKIT_API_ENDPOINT \
+    NEXT_PUBLIC_VOICE_INPUT_ENABLED=$NEXT_PUBLIC_VOICE_INPUT_ENABLED
+
 # Add standalone output to next.config.js if not present
 RUN if ! grep -q "output.*standalone" next.config.js 2>/dev/null; then \
         echo "Adding standalone output to next.config.js"; \
         sed -i 's/const nextConfig = {/const nextConfig = {\n  output: "standalone",/' next.config.js; \
     fi
+
+# Ensure public folder exists (may be empty)
+RUN mkdir -p public
 
 # Build the application
 RUN npm run build

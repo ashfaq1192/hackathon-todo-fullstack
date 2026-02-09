@@ -1,0 +1,42 @@
+# Values override for Dapr + Kafka deployment on Minikube
+# Usage: helm install todo-chatbot ./helm/todo-chatbot -f values-dapr.yaml
+
+# Enable Dapr sidecar injection and consumer services
+dapr:
+  enabled: true
+
+# Backend - Dapr sidecar publishes events to Kafka
+backend:
+  image:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: Never
+
+# Frontend - Dapr sidecar for service invocation
+frontend:
+  image:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: Never
+
+# Consumer microservices
+notificationService:
+  replicaCount: 1
+  image:
+    repository: todo-notification
+    tag: latest
+    pullPolicy: Never
+
+recurringTaskService:
+  replicaCount: 1
+  image:
+    repository: todo-recurring
+    tag: latest
+    pullPolicy: Never
+
+auditService:
+  replicaCount: 1
+  image:
+    repository: todo-audit
+    tag: latest
+    pullPolicy: Never

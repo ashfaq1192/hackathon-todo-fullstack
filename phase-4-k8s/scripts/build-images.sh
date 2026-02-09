@@ -1,17 +1,20 @@
 #!/bin/bash
 # Build Docker images for Todo Chatbot
-# Usage: ./build-images.sh [--backend-only | --frontend-only]
+# Usage: ./build-images.sh [--backend-only | --frontend-only | --services-only | --all]
 #
 # Options:
-#   --backend-only   Build only the backend image
-#   --frontend-only  Build only the frontend image
-#   (no option)      Build both images
+#   --backend-only    Build only the backend image
+#   --frontend-only   Build only the frontend image
+#   --services-only   Build only the consumer service images (notification, recurring, audit)
+#   --all             Build all images including consumer services
+#   (no option)       Build backend and frontend images
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PHASE3_DIR="$PROJECT_ROOT/../phase-3-chatbot"
+PHASE5_DIR="$PROJECT_ROOT/../phase-5-cloud-deployment"
 
 # Color output
 RED='\033[0;31m'
@@ -57,11 +60,18 @@ echo -e "${GREEN}Source code found${NC}"
 # Parse arguments
 BUILD_BACKEND=true
 BUILD_FRONTEND=true
+BUILD_SERVICES=false
 
 if [ "$1" = "--backend-only" ]; then
     BUILD_FRONTEND=false
 elif [ "$1" = "--frontend-only" ]; then
     BUILD_BACKEND=false
+elif [ "$1" = "--services-only" ]; then
+    BUILD_BACKEND=false
+    BUILD_FRONTEND=false
+    BUILD_SERVICES=true
+elif [ "$1" = "--all" ]; then
+    BUILD_SERVICES=true
 fi
 
 # Build backend image
@@ -132,12 +142,51 @@ if [ "$BUILD_FRONTEND" = true ]; then
     fi
 fi
 
+# Build consumer service images (Dapr)
+if [ "$BUILD_SERVICES" = true ]; then
+    SERVICES_DIR="$PHASE5_DIR/services"
+
+    if [ ! -d "$SERVICES_DIR" ]; then
+        echo -e "${RED}Error: services directory not found at $SERVICES_DIR${NC}"
+        exit 1
+    fi
+
+    for SERVICE in notification-service recurring-task-service audit-service; do
+        IMAGE_NAME="todo-${SERVICE%%-service}"  # notification, recurring-task, audit
+        # Simplify image names
+        case "$SERVICE" in
+            notification-service) IMAGE_NAME="todo-notification" ;;
+            recurring-task-service) IMAGE_NAME="todo-recurring" ;;
+            audit-service) IMAGE_NAME="todo-audit" ;;
+        esac
+
+        echo ""
+        echo "--- Building $SERVICE Image ---"
+        echo "Dockerfile: $SERVICES_DIR/$SERVICE/Dockerfile"
+
+        START_TIME=$(date +%s)
+
+        docker build \
+            --progress=plain \
+            -t "$IMAGE_NAME:latest" \
+            -f "$SERVICES_DIR/$SERVICE/Dockerfile" \
+            "$SERVICES_DIR/$SERVICE"
+
+        END_TIME=$(date +%s)
+        DURATION=$((END_TIME - START_TIME))
+
+        SIZE=$(docker images "$IMAGE_NAME:latest" --format "{{.Size}}")
+        echo -e "${GREEN}$SERVICE image built in ${DURATION}s (${SIZE})${NC}"
+    done
+fi
+
 echo ""
 echo "=== Build Complete ==="
 echo "Images created:"
-docker images | grep -E "REPOSITORY|todo-backend|todo-frontend"
+docker images | grep -E "REPOSITORY|todo-"
 
 echo ""
 echo "Next steps:"
 echo "  1. Test with docker-compose: docker-compose -f $PROJECT_ROOT/docker-compose.yml up"
 echo "  2. Load into Minikube: minikube image load todo-backend:latest todo-frontend:latest"
+echo "  3. For Dapr services: minikube image load todo-notification:latest todo-recurring:latest todo-audit:latest"

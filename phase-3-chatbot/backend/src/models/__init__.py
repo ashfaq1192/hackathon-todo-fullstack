@@ -6,6 +6,6 @@ Models must be imported here to ensure they are registered with SQLModel.metadat
 before database initialization (table creation).
 """
 
-from .task import Task
+from .task import Task, RecurringType
 
-__all__ = ["Task"]
+__all__ = ["Task", "RecurringType"]
