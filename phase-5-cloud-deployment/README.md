@@ -15,6 +15,8 @@
 | **Health Check** | [http://34.57.215.48/health](http://34.57.215.48/health) | Healthy |
 | **API Docs** | [http://34.57.215.48/docs](http://34.57.215.48/docs) | Available |
 
+![GKE Live App](./gke-live-app-screenshot.png)
+
 ---
 
 ## Overview
