@@ -109,3 +109,10 @@ test-results/
 /hackathon-todo-frontend@*
 .vercel
 .env*.local
+
+# GKE/Cloud secrets and deployment files
+GKE Secretes.txt
+updated GCP Secrets after adding IP of Deployment.txt
+deploy.yaml.txt
+phase-5-cloud-deployment/.env.example
+.playwright-mcp/
