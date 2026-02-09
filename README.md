@@ -12,6 +12,8 @@
 
 ![GKE Live App](./phase-5-cloud-deployment/gke-live-app-screenshot.png)
 
+![GKE Dashboard](./phase-5-cloud-deployment/gke-dashboard-screenshot.png)
+
 ---
 
 ## Table of Contents
