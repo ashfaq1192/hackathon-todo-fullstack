@@ -10,6 +10,8 @@
 | **Backend API** | [http://34.57.215.48](http://34.57.215.48) |
 | **API Docs** | [http://34.57.215.48/docs](http://34.57.215.48/docs) |
 
+![GKE Live App](./phase-5-cloud-deployment/gke-live-app-screenshot.png)
+
 ---
 
 ## Table of Contents
