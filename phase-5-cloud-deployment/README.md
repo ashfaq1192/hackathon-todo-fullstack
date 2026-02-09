@@ -1,54 +1,61 @@
-# Phase V - Advanced Cloud Deployment (Oracle Kubernetes Engine)
+# Phase V - Cloud Deployment (Google Kubernetes Engine)
 
 **Branch**: `main`
-**Last Updated**: 2026-02-03
-**Status**: ✅ Ready for Deployment
+**Last Updated**: 2026-02-09
+**Status**: Deployed and Live
+
+---
+
+## Live Application
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Frontend (UI)** | [http://34.44.146.146](http://34.44.146.146) | Deployed |
+| **Backend (API)** | [http://34.57.215.48](http://34.57.215.48) | Deployed |
+| **Health Check** | [http://34.57.215.48/health](http://34.57.215.48/health) | Healthy |
+| **API Docs** | [http://34.57.215.48/docs](http://34.57.215.48/docs) | Available |
 
 ---
 
 ## Overview
 
-Phase V deploys the Todo Chatbot application to Oracle Kubernetes Engine (OKE) with:
-- **OKE Enhanced Cluster** (required - Basic Cluster API is non-functional)
-- **Docker Hub** images for easy deployment
-- **NGINX Ingress Controller** for external access
-- **Neon PostgreSQL** as external database
+Phase V deploys the Todo Chatbot application to **Google Kubernetes Engine (GKE)** with:
+- **GKE Standard Cluster** with LoadBalancer services for external access
+- **Docker Hub** images (multi-stage builds, linux/amd64)
+- **Neon PostgreSQL** as external managed database
 - **Gemini AI** for chatbot functionality
-
-**Estimated Cost**: ~$3/day (delete cluster after demo to minimize costs)
+- **Better Auth** for JWT-based authentication
 
 ---
 
-## Quick Start
+## Architecture
 
-### Option 1: Complete Beginner Guide
-
-📖 **[oracle_guide.md](./oracle_guide.md)** - Step-by-step guide from account creation to deployment
-
-### Option 2: Experienced Users
-
-If you're familiar with Kubernetes:
-
-```bash
-# 1. Create OKE Enhanced Cluster via OCI Console
-# 2. Configure kubectl (use OCI Cloud Shell)
-# 3. Install Ingress Controller
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
-
-# 4. Create secrets
-kubectl create secret generic todo-backend-secrets \
-  --from-literal=DATABASE_URL="your-neon-url" \
-  --from-literal=GEMINI_API_KEY="your-key" \
-  --from-literal=BETTER_AUTH_SECRET="your-secret" \
-  --from-literal=JWT_SECRET_KEY="your-jwt-secret"
-
-# 5. Deploy application
-kubectl apply -f k8s/
-
-# 6. Get external IP
-kubectl get svc -n ingress-nginx
+```
+                        Internet
+                           |
+              +------------+------------+
+              |                         |
+              v                         v
+   +-------------------+    +-------------------+
+   | Frontend LB       |    | Backend LB        |
+   | 34.44.146.146:80  |    | 34.57.215.48:80   |
+   +-------------------+    +-------------------+
+              |                         |
+              v                         v
+   +-------------------+    +-------------------+
+   | Frontend Pod      |    | Backend Pod       |
+   | Next.js 16        |    | FastAPI           |
+   | Port 3000         |    | Port 8000         |
+   | Better Auth       |    | MCP Tools (5)     |
+   +-------------------+    | Gemini AI Client  |
+                            +-------------------+
+                                       |
+                                       v
+                            +-------------------+
+                            | Neon PostgreSQL   |
+                            | (External DB)     |
+                            | SSL/TLS           |
+                            +-------------------+
 ```
 
 ---
@@ -57,80 +64,146 @@ kubectl get svc -n ingress-nginx
 
 All images are built for `linux/amd64` and publicly available:
 
-| Image | Tag | Size | Description |
-|-------|-----|------|-------------|
-| `ashfaq1192/todo-backend` | v2 | ~600MB | FastAPI + MCP Tools + Gemini |
-| `ashfaq1192/todo-frontend` | v3 | ~350MB | Next.js + Better Auth |
-| `ashfaq1192/todo-audit` | v2 | ~200MB | Audit logging service |
-| `ashfaq1192/todo-notification` | v2 | ~200MB | Notification service |
-| `ashfaq1192/todo-recurring` | v2 | ~200MB | Recurring task service |
+| Image | Tag | Description |
+|-------|-----|-------------|
+| `ashfaq1192/todo-frontend` | **v4** | Next.js + Better Auth (GKE IPs baked in) |
+| `ashfaq1192/todo-backend` | v2 | FastAPI + MCP Tools + Gemini AI |
 
 ### Pull Images
 
 ```bash
+docker pull ashfaq1192/todo-frontend:v4
 docker pull ashfaq1192/todo-backend:v2
-docker pull ashfaq1192/todo-frontend:v3
 ```
 
 ---
 
-## Architecture
+## Deployment Guide
 
+### Prerequisites
+
+- GKE cluster running with `kubectl` connected
+- Docker installed locally + Docker Hub account
+- `gcloud` CLI authenticated
+
+### Step 1: Deploy Services to Get LoadBalancer IPs
+
+```bash
+kubectl create namespace todo-app
+kubectl apply -f deploy.yaml
+kubectl get svc -n todo-app --watch
+# Wait for EXTERNAL-IP to be assigned (1-3 minutes)
 ```
-                    ┌─────────────────────────────────────────┐
-                    │         Oracle Cloud (OKE)              │
-                    │                                         │
-┌──────────┐        │  ┌─────────────────────────────────┐   │
-│  Users   │───────▶│  │      NGINX Ingress Controller   │   │
-└──────────┘        │  │         (LoadBalancer)          │   │
-                    │  └──────────────┬──────────────────┘   │
-                    │                 │                       │
-                    │    ┌────────────┴────────────┐         │
-                    │    │                         │         │
-                    │    ▼                         ▼         │
-                    │  ┌───────────┐       ┌─────────────┐   │
-                    │  │  Backend  │       │  Frontend   │   │
-                    │  │  (2 pods) │◀─────▶│  (2 pods)   │   │
-                    │  │  FastAPI  │       │   Next.js   │   │
-                    │  └─────┬─────┘       └─────────────┘   │
-                    │        │                               │
-                    └────────┼───────────────────────────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │  Neon PostgreSQL │
-                    │  (External DB)   │
-                    └─────────────────┘
+
+### Step 2: Build Frontend with Correct IPs
+
+Next.js `NEXT_PUBLIC_*` variables are **baked into the JS bundle at build time**.
+They CANNOT be changed at runtime via K8s env vars. Use `--build-arg`:
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_API_URL=http://<BACKEND_LB_IP> \
+  --build-arg NEXT_PUBLIC_BETTER_AUTH_URL=http://<FRONTEND_LB_IP> \
+  --build-arg BETTER_AUTH_URL=http://<FRONTEND_LB_IP> \
+  --build-arg NEXT_PUBLIC_CHATKIT_API_ENDPOINT=http://<BACKEND_LB_IP>/api \
+  --platform linux/amd64 \
+  -t ashfaq1192/todo-frontend:v4 \
+  -f phase-4-k8s/docker/frontend/Dockerfile \
+  phase-3-chatbot/frontend
+
+docker push ashfaq1192/todo-frontend:v4
 ```
+
+### Step 3: Create Kubernetes Secrets
+
+```bash
+kubectl delete secret project-secrets --namespace=todo-app --ignore-not-found=true
+
+kubectl create secret generic project-secrets \
+  --namespace=todo-app \
+  --from-literal=DATABASE_URL="${REAL_DB_URL}" \
+  --from-literal=JWT_SECRET_KEY="${JWT_SECRET}" \
+  --from-literal=GEMINI_API_KEY="${GEMINI_KEY}" \
+  --from-literal=GEMINI_MODEL="gemini-2.5-flash" \
+  --from-literal=GEMINI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/" \
+  --from-literal=CORS_ORIGINS="http://<FRONTEND_LB_IP>,http://localhost:3000" \
+  --from-literal=BETTER_AUTH_SECRET="${BETTER_AUTH}" \
+  --from-literal=BETTER_AUTH_URL="http://<FRONTEND_LB_IP>" \
+  --from-literal=NEXT_PUBLIC_BETTER_AUTH_URL="http://<FRONTEND_LB_IP>" \
+  --from-literal=NEXT_PUBLIC_API_URL="http://<BACKEND_LB_IP>" \
+  --from-literal=DAPR_ENABLED="false"
+```
+
+### Step 4: Update Deployment and Restart
+
+```bash
+# Update image version in deploy.yaml to v4, then:
+kubectl apply -f deploy.yaml
+kubectl delete pods --all --namespace=todo-app
+
+# Verify pods are running
+kubectl get pods -n todo-app --watch
+```
+
+### Step 5: Verify
+
+1. Open `http://<FRONTEND_LB_IP>` in browser
+2. Sign up / Log in
+3. Create, complete, and delete tasks
+4. Test the AI chatbot
 
 ---
 
-## Important Notes
+## Critical Lessons Learned
 
-### ⚠️ Enhanced Cluster Required
+### 1. NEXT_PUBLIC_* Variables Are Build-Time Only
 
-**CRITICAL**: You MUST create an **Enhanced Cluster**, not a Basic Cluster.
+| Variable Type | When Read | Can Change at Runtime? |
+|---------------|-----------|----------------------|
+| `NEXT_PUBLIC_*` | `npm run build` | NO - frozen in JS bundle |
+| Server-side (e.g. `DATABASE_URL`) | Server startup | YES - via K8s env vars |
 
-- Basic Cluster API is non-functional (returns errors)
-- Enhanced Cluster costs ~$3/day
-- **Strategy**: Deploy → Demo → Delete within 24 hours
+If you set `NEXT_PUBLIC_API_URL` in a K8s ConfigMap/Secret, the **browser will still call localhost**.
+You MUST use `--build-arg` during `docker build`.
 
-### 💰 Cost Management
+### 2. .dockerignore Blocks .env Files
 
-| Resource | Daily Cost |
-|----------|------------|
-| OKE Enhanced Control Plane | ~$2.40 |
-| Worker Nodes (2x VM.Standard.E4.Flex) | ~$0.50 |
-| Load Balancer | ~$0.10 |
-| **Total** | **~$3.00/day** |
+The frontend `.dockerignore` excludes `.env`, `.env.local`, etc.:
+```
+.env
+.env.local
+.env.development.local
+```
 
-**Recommendation**: Delete cluster immediately after recording demo video.
+Creating a `.env` file and hoping Docker copies it into the image will **silently fail**.
+The `--build-arg` approach bypasses `.dockerignore` entirely.
 
-### 🏗️ Architecture
+### 3. Two-Pass Deployment Pattern
 
-- **Platform**: `linux/amd64` (x86_64)
-- **Node Shape**: VM.Standard.E4.Flex (1 OCPU, 8GB RAM each)
-- **Compatible with**: Local Docker, Minikube, and OKE
+You can't know LoadBalancer IPs before deploying, but you need them to build the frontend.
+Solution:
+
+1. **First pass**: Deploy with any image to get LoadBalancer IPs
+2. **Build**: Rebuild frontend with correct IPs via `--build-arg`
+3. **Second pass**: Push new image, update deployment, restart pods
+
+### 4. Backend Doesn't Need Rebuilding for Config Changes
+
+The backend reads `CORS_ORIGINS`, `DATABASE_URL`, etc. from environment at startup.
+To change these, just update K8s Secrets and restart pods - no Docker rebuild needed.
+
+### 5. CORS Must Include Frontend LB IP
+
+The backend defaults to `CORS_ORIGINS=http://localhost:3000`. In GKE, the browser
+is at `http://34.44.146.146`, so CORS must include that origin:
+```
+CORS_ORIGINS=http://34.44.146.146,http://localhost:3000
+```
+
+### 6. Always Use --platform linux/amd64
+
+GKE nodes are x86_64. Building on Apple Silicon (ARM64) without `--platform linux/amd64`
+produces images that crash with `exec format error`.
 
 ---
 
@@ -138,109 +211,72 @@ docker pull ashfaq1192/todo-frontend:v3
 
 ```
 phase-5-cloud-deployment/
-├── README.md                    # This file
-├── oracle_guide.md              # Complete beginner deployment guide
-├── IMPLEMENTATION_GUIDE.md      # Detailed implementation reference
-├── SETUP_PREREQUISITES.md       # Prerequisites installation
-├── NEXT_STEPS.md               # Future enhancements
-├── k8s/                        # Kubernetes manifests
-│   ├── backend-deployment.yaml
-│   ├── frontend-deployment.yaml
-│   ├── ingress.yaml
-│   └── secrets.yaml (template)
-├── dapr/                       # Dapr components (future)
+├── README.md                       # This file
+├── IMPLEMENTATION_GUIDE.md         # Detailed implementation reference
+├── SETUP_PREREQUISITES.md          # Prerequisites installation
+├── NEXT_STEPS.md                   # Future enhancements
+├── GKE_debugging.md                # GKE-specific debugging notes
+├── k8s/                            # Kubernetes manifests
+│   ├── backend-loadbalancer.yaml   # Backend LoadBalancer service
+│   └── kafka/                      # Kafka/Redpanda manifests (future)
+├── dapr/                           # Dapr components (future)
 │   └── components/
-├── scripts/                    # Deployment scripts
+├── services/                       # Microservices (future)
+│   ├── audit-service/
+│   ├── notification-service/
+│   └── recurring-task-service/
+├── scripts/                        # Deployment scripts
 │   └── verify-prerequisites.sh
-└── docs.md                     # Additional documentation
+└── docs.md                         # Additional documentation
 ```
 
 ---
 
-## Local Testing (Minikube)
+## Environment Variables Reference
 
-Before deploying to OKE, test locally with Minikube:
+### Build-Time (Frontend - via --build-arg)
 
-```bash
-# Start Minikube
-minikube start --driver=docker --memory=4096 --cpus=2
+| Variable | Example Value | Purpose |
+|----------|---------------|---------|
+| `NEXT_PUBLIC_API_URL` | `http://34.57.215.48` | Browser API calls to backend |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://34.44.146.146` | Auth redirect URLs |
+| `BETTER_AUTH_URL` | `http://34.44.146.146` | Server-side auth URL |
+| `NEXT_PUBLIC_CHATKIT_API_ENDPOINT` | `http://34.57.215.48/api` | ChatKit endpoint |
 
-# Enable Ingress
-minikube addons enable ingress
+### Runtime (Both - via K8s Secrets)
 
-# Deploy using Helm
-cd phase-4-k8s
-helm install todo-chatbot ./helm/todo-chatbot \
-  -f ./helm/todo-chatbot/values-minikube.yaml
-
-# Access via port-forward
-kubectl port-forward svc/todo-chatbot-frontend 3000:3000
-
-# Open http://localhost:3000
-```
-
----
-
-## Deployment Checklist
-
-### Pre-Deployment
-- [ ] Oracle Cloud account created
-- [ ] Docker Hub images verified
-- [ ] Environment variables ready (DATABASE_URL, GEMINI_API_KEY, etc.)
-
-### Deployment
-- [ ] OKE Enhanced Cluster created (~15 min)
-- [ ] kubectl configured via Cloud Shell
-- [ ] NGINX Ingress Controller installed
-- [ ] Kubernetes secrets created
-- [ ] Application deployed
-- [ ] External IP obtained
-
-### Verification
-- [ ] Health endpoint responds: `curl http://<IP>/health`
-- [ ] Frontend loads in browser
-- [ ] User can sign up and log in
-- [ ] Tasks can be created
-- [ ] Chatbot responds to queries
-
-### Post-Demo Cleanup
-- [ ] Delete Kubernetes resources
-- [ ] Delete OKE cluster
-- [ ] Verify no resources remain (Compute, Load Balancers, Block Storage)
+| Variable | Used By | Purpose |
+|----------|---------|---------|
+| `DATABASE_URL` | Both | Neon PostgreSQL connection |
+| `JWT_SECRET_KEY` | Both | Token signing (MUST match) |
+| `BETTER_AUTH_SECRET` | Frontend | Session signing |
+| `CORS_ORIGINS` | Backend | Allowed frontend origins |
+| `GEMINI_API_KEY` | Backend | AI chatbot API |
+| `GEMINI_MODEL` | Backend | Model version (gemini-2.5-flash) |
 
 ---
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Pods in "Pending" | Check node resources: `kubectl describe nodes` |
-| ImagePullBackOff | Verify Docker Hub images are public |
-| 502 Bad Gateway | Check pod logs: `kubectl logs deploy/todo-backend` |
-| CORS errors | Verify FRONTEND_URL matches access URL |
-| Database connection failed | Check DATABASE_URL and Neon IP allowlist |
-
-**Full troubleshooting guide**: See [oracle_guide.md](./oracle_guide.md#12-troubleshooting)
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| "Failed to fetch" in browser | `NEXT_PUBLIC_*` vars not set during build | Rebuild with `--build-arg` |
+| CORS errors | Backend `CORS_ORIGINS` missing frontend IP | Update K8s secret, restart pods |
+| 401 on all API calls | JWT secret mismatch | Ensure same `JWT_SECRET_KEY` in both |
+| `exec format error` | ARM64 image on AMD64 node | Rebuild with `--platform linux/amd64` |
+| ImagePullBackOff | Image not pushed or wrong tag | Verify `docker push` completed |
+| LoadBalancer `<pending>` | Quota or permission issue | Check `kubectl describe svc` events |
 
 ---
 
 ## Related Documentation
 
+- **GKE Deployment Skill**: [../.claude/skills/gke-fullstack-deployment/](../.claude/skills/gke-fullstack-deployment/) (comprehensive pitfalls + workflow guide)
 - **Phase IV (Local K8s)**: [../phase-4-k8s/README.md](../phase-4-k8s/README.md)
 - **Phase III (Chatbot)**: [../phase-3-chatbot/README.md](../phase-3-chatbot/README.md)
 - **Hackathon Requirements**: [../Hackathon II - Todo Spec-Driven Development.pdf](../Hackathon%20II%20-%20Todo%20Spec-Driven%20Development.pdf)
-- **Project Constitution**: [../.specify/memory/constitution.md](../.specify/memory/constitution.md)
 
 ---
 
-## External Resources
-
-- [Oracle OKE Documentation](https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Helm Documentation](https://helm.sh/docs/)
-- [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/)
-
----
-
-**Maintained by**: AI-Assisted Development (Claude Code)
-**Last Updated**: 2026-02-03
+**Maintained by**: AI-Assisted Development (Claude Code + Gemini)
+**Last Updated**: 2026-02-09
